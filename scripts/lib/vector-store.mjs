@@ -1,8 +1,11 @@
 import * as lancedb from '@lancedb/lancedb';
+import natural from 'natural';
+const { TfIdf } = natural;
 import { CONFIG } from './config.mjs';
 import { embed } from './embedding.mjs';
 
 let _db = null;
+let _bm25Index = null; // BM25 关键词索引（LanceDB FTS 不可用时的回退）
 let _table = null;
 
 /** 获取或初始化 LanceDB 连接 */
@@ -66,7 +69,17 @@ export async function upsertChunks(chunks) {
 /** 写入 chunks 并确保全文索引就绪 */
 export async function upsertChunksWithIndex(chunks) {
   const result = await upsertChunks(chunks);
-  if (result.inserted > 0) await ensureFTSIndex();
+  if (result.inserted > 0) {
+    await ensureFTSIndex();
+    // 同时构建本地 BM25 回退索引
+    const table = await getTable();
+    if (table) {
+      try {
+        const all = await table.search([0.5]).limit(9999).toArray();
+        rebuildBM25(all);
+      } catch {}
+    }
+  }
   return result;
 }
 
@@ -87,13 +100,42 @@ export async function search(queryText) {
   try {
     bm25Results = await table.search(queryText, 'fts').limit(CONFIG.searchTopK).toArray();
   } catch (_) {
-    // FTS 索引不存在时静默降级为纯向量搜索
+    // LanceDB FTS 不可用 → 回退到本地 BM25
+    if (_bm25Index) {
+      bm25Results = bm25Search(queryText);
+    }
   }
 
-  // Reciprocal Rank Fusion：合并两个排名的分数
+  // Reciprocal Rank Fusion
   const fused = fuseResults(candidates, bm25Results, CONFIG.searchTopK * 3);
   fused.sort((a, b) => a._distance - b._distance);
   return fused.slice(0, CONFIG.searchTopK);
+}
+
+/** 本地 BM25 关键词搜索（LanceDB FTS 回退） */
+function bm25Search(queryText) {
+  if (!_bm25Index) return [];
+  const terms = queryText.toLowerCase().split(/\s+/);
+  const scores = [];
+  _bm25Index.documents.forEach((doc, idx) => {
+    let score = 0;
+    terms.forEach(term => {
+      try { score += _bm25Index.tfidf(term, idx); } catch {}
+    });
+    if (score > 0) scores.push({ ...doc, _bm25Score: score, idx });
+  });
+  scores.sort((a, b) => b._bm25Score - a._bm25Score);
+  return scores.slice(0, CONFIG.searchTopK).map(s => ({
+    chunk_id: s.chunk_id, content: s.content, source: s.source,
+    _distance: 1.5 - Math.min(s._bm25Score / 10, 0.5),
+  }));
+}
+
+/** 构建/更新 BM25 索引 */
+function rebuildBM25(allChunks) {
+  if (allChunks.length === 0) return;
+  _bm25Index = { tfidf: new TfIdf(), documents: allChunks };
+  allChunks.forEach(c => _bm25Index.tfidf.addDocument(c.content));
 }
 
 /** RRF 融合：向量排名 + 关键词排名 → 综合排名 */
