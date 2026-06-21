@@ -1,0 +1,6 @@
+index/vector/
+index/models/
+knowledge-base/
+vector-db/
+node_modules/
+.env
