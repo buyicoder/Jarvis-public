@@ -2,7 +2,7 @@ import { readdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { execSync } from 'child_process';
 import { readMarkdown, chunkMarkdown } from './lib/knowledge-base.mjs';
-import { clearAll, upsertChunks } from './lib/vector-store.mjs';
+import { clearAll, upsertChunksWithIndex } from './lib/vector-store.mjs';
 
 const MODEL_ONNX = resolve(import.meta.dirname || '.', '..', 'index', 'models', 'bge-small-zh-v1.5', 'onnx', 'model.onnx');
 
@@ -34,11 +34,9 @@ scanDir('memory');
 console.log('Total chunks found:', allChunks.length);
 
 if (allChunks.length > 0) {
-  const allTexts = allChunks.map(c => c.content);
-  buildVocabulary(allTexts);
   await clearAll();
-  const result = await upsertChunks(allChunks);
-  console.log('Re-indexed:', result.inserted, 'chunks');
+  const result = await upsertChunksWithIndex(allChunks);
+  console.log('Re-indexed:', result.inserted, 'chunks (BM25 + vector)');
 }
 
 // Test search

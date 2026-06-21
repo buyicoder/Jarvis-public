@@ -63,44 +63,97 @@ export async function upsertChunks(chunks) {
   return { inserted: rows.length };
 }
 
+/** 写入 chunks 并确保全文索引就绪 */
+export async function upsertChunksWithIndex(chunks) {
+  const result = await upsertChunks(chunks);
+  if (result.inserted > 0) await ensureFTSIndex();
+  return result;
+}
+
 /**
- * 语义搜索（带时间衰减）
+ * 语义搜索（向量 + BM25 混合，带时间衰减）
  * @param {string} queryText
  * @returns {Promise<Array<{chunk_id: string, content: string, source: string, _distance: number, date: string}>>}
  */
 export async function search(queryText) {
-  const queryVec = (await embed([queryText]))[0];
-
   const table = await getTable();
   if (!table) return [];
 
-  // 多取一些候选，用于时间衰减后重排
-  const candidates = await table
-    .search(queryVec)
-    .limit(CONFIG.searchTopK * 3)
-    .toArray();
+  const queryVec = (await embed([queryText]))[0];
+  const candidates = await table.search(queryVec).limit(CONFIG.searchTopK * 3).toArray();
 
-  // 时间衰减：越近权重越高
+  // === 混合搜索：向量 + BM25 全文检索 ===
+  let bm25Results = [];
+  try {
+    bm25Results = await table.search(queryText, 'fts').limit(CONFIG.searchTopK).toArray();
+  } catch (_) {
+    // FTS 索引不存在时静默降级为纯向量搜索
+  }
+
+  // Reciprocal Rank Fusion：合并两个排名的分数
+  const fused = fuseResults(candidates, bm25Results, CONFIG.searchTopK * 3);
+  fused.sort((a, b) => a._distance - b._distance);
+  return fused.slice(0, CONFIG.searchTopK);
+}
+
+/** RRF 融合：向量排名 + 关键词排名 → 综合排名 */
+function fuseResults(vectorResults, bm25Results, limit) {
+  const scores = new Map();
+
+  // 向量分数（L2距离越小越好 → 排名越小越好）
+  vectorResults.forEach((r, i) => {
+    const id = r.chunk_id || r.source + '-' + i;
+    scores.set(id, { ...r, _score: 1 / (i + 60), _distance: r._distance });
+  });
+
+  // BM25 分数
+  bm25Results.forEach((r, i) => {
+    const id = r.chunk_id || r.source + '-' + i;
+    const existing = scores.get(id);
+    if (existing) {
+      existing._score += 1 / (i + 60);
+      // BM25 命中让向量距离减半（权重更高）
+      existing._distance *= 0.5;
+    } else {
+      scores.set(id, { ...r, _score: 1 / (i + 60), _distance: 1.5 });
+    }
+  });
+
+  const fused = [...scores.values()];
+
+  // 时间衰减
   const now = new Date();
-  const decayed = candidates.map(r => {
+  fused.forEach(r => {
     let timeFactor = 1.0;
     if (r.date) {
       const d = new Date(r.date);
       if (!isNaN(d.getTime())) {
-        const daysAgo = (now - d) / (1000 * 60 * 60 * 24);
+        const daysAgo = (now - d) / 86400000;
         if (daysAgo <= 30) timeFactor = 1.0;
         else if (daysAgo <= 90) timeFactor = 0.8;
         else timeFactor = 0.5;
       }
     }
-    // 重要性加权
     const impFactor = r.importance === 'high' ? 1.2 : r.importance === 'low' ? 0.8 : 1.0;
-    return { ...r, _distance: r._distance / (timeFactor * impFactor) };
+    r._distance = r._distance / (timeFactor * impFactor);
   });
 
-  // 重排后取 top K
-  decayed.sort((a, b) => a._distance - b._distance);
-  return decayed.slice(0, CONFIG.searchTopK);
+  return fused.slice(0, limit);
+}
+
+/** 创建全文索引（首次调用时自动创建） */
+let _ftsCreated = false;
+export async function ensureFTSIndex() {
+  if (_ftsCreated) return;
+  const table = await getTable();
+  if (!table) return;
+  try {
+    await table.createFtsIndex('content', { replace: true });
+    _ftsCreated = true;
+    console.log('  📖 BM25 全文索引就绪');
+  } catch (e) {
+    console.log('  ⚠️ FTS 索引创建失败，使用纯向量搜索:', e.message.slice(0, 60));
+  }
 }
 
 /**
