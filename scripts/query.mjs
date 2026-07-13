@@ -5,7 +5,7 @@ async function main() {
   const query = process.argv.slice(2).join(' ');
   if (!query) {
     console.log('用法: node scripts/query.mjs "查询文本"');
-    console.log('示例: node scripts/query.mjs "modfactory 渲染问题"');
+    console.log('示例: node scripts/query.mjs "release checklist"');
     process.exit(1);
   }
 

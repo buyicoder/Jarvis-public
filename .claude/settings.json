@@ -1,39 +1,7 @@
 {
-  "env": {
-    "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
-    "ANTHROPIC_API_KEY": "sk-your-key-here",
-    "ANTHROPIC_MODEL": "deepseek-v4-pro",
-    "ANTHROPIC_SMALL_FAST_MODEL": "deepseek-v4-flash",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-v4-pro",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-v4-pro",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-flash",
-    "CLAUDE_CODE_EFFORT_LEVEL": "max"
-  },
-  "model": "deepseek-v4-pro",
   "hooks": {
     "Stop": [
       { "command": "node .claude/hooks/stop.js" }
-    ]
-  },
-  "permissions": {
-    "allow": [
-      "Bash(*)",
-      "Write(*)",
-      "Edit(*)",
-      "Agent(*)",
-      "Glob(*)",
-      "Grep(*)",
-      "Read(*)",
-      "WebSearch(*)",
-      "WebFetch(*)",
-      "Skill(*)",
-      "TaskCreate(*)",
-      "TaskUpdate(*)",
-      "CronCreate(*)",
-      "CronDelete(*)",
-      "CronList(*)",
-      "ScheduleWakeup(*)",
-      "AskUserQuestion(*)"
     ]
   }
 }
