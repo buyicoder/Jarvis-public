@@ -1,15 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { copyFile, lstat, mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { copyFile, mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
+import { dirname, join, relative, resolve } from 'node:path';
+import { isPathInside } from './path-boundary.mjs';
 
 function sha(value) {
   return createHash('sha256').update(value).digest('hex');
-}
-
-function inside(parent, child) {
-  const rel = relative(resolve(parent), resolve(child));
-  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
 }
 
 async function listFiles(root, current = root) {
@@ -38,7 +34,7 @@ async function assertEmpty(path) {
 export async function planVaultCopy({ source, target, planPath }) {
   const sourceRoot = resolve(source);
   const targetRoot = resolve(target);
-  if (sourceRoot === targetRoot || inside(sourceRoot, targetRoot) || inside(targetRoot, sourceRoot)) throw new Error('Source and target Vaults must be separate.');
+  if (sourceRoot === targetRoot || isPathInside(sourceRoot, targetRoot) || isPathInside(targetRoot, sourceRoot)) throw new Error('Source and target Vaults must be separate.');
   if (!(await stat(sourceRoot)).isDirectory()) throw new Error('Source Vault must be a directory.');
   await assertEmpty(targetRoot);
   const files = await listFiles(sourceRoot);
@@ -78,7 +74,7 @@ export async function copyVault(planPath, { confirmCopyOnly = false, dryRun = fa
     for (const file of plan.files) {
       const source = resolve(plan.source, file.path);
       const target = resolve(plan.target, file.path);
-      if (!inside(plan.source, source) || !inside(plan.target, target)) throw new Error(`Unsafe Vault path: ${file.path}`);
+      if (!isPathInside(plan.source, source) || !isPathInside(plan.target, target)) throw new Error(`Unsafe Vault path: ${file.path}`);
       await mkdir(dirname(target), { recursive: true });
       await copyFile(source, target);
     }

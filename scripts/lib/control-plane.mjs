@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { copyFile, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { lifecycleStatus } from './governance.mjs';
 
 const TABLES = [
   'projects', 'roles', 'role_assignments', 'tasks', 'task_events', 'reports',
@@ -39,12 +40,6 @@ function json(value) {
 
 function parse(value) {
   return JSON.parse(value);
-}
-
-function lifecycle(value = {}) {
-  if (value.supersededBy || value.status === 'superseded') return 'superseded';
-  if (value.resolvedAt || ['resolved', 'retired', 'rejected', 'applied'].includes(value.status)) return 'resolved';
-  return 'current';
 }
 
 export function controlDbPath(config = {}) {
@@ -102,11 +97,11 @@ function upsertEvent(db, value, sourceKey) {
   }
   db.prepare(`INSERT INTO task_events(source_key,task_id,project_id,event_type,lifecycle,payload_json,occurred_at) VALUES(?,?,?,?,?,?,?)
     ON CONFLICT(source_key) DO UPDATE SET lifecycle=excluded.lifecycle,payload_json=excluded.payload_json,occurred_at=excluded.occurred_at`)
-    .run(sourceKey || stableKey('event', eventId), taskId, value.projectId || null, value.type || 'note', lifecycle(value), json({ ...value, eventId }), now(value));
+    .run(sourceKey || stableKey('event', eventId), taskId, value.projectId || null, value.type || 'note', lifecycleStatus(value), json({ ...value, eventId }), now(value));
   if (value.type === 'decision') {
     db.prepare(`INSERT INTO decisions(source_key,project_id,status,payload_json,updated_at) VALUES(?,?,?,?,?)
       ON CONFLICT(source_key) DO UPDATE SET status=excluded.status,payload_json=excluded.payload_json,updated_at=excluded.updated_at`)
-      .run(sourceKey || stableKey('decision', eventId), value.projectId || null, lifecycle(value), json(value), now(value));
+      .run(sourceKey || stableKey('decision', eventId), value.projectId || null, lifecycleStatus(value), json(value), now(value));
   }
   return 1;
 }
@@ -156,11 +151,12 @@ export function readWarRoom(config, projectId = '') {
   try {
     const projects = db.prepare('SELECT payload_json FROM projects WHERE (? = \'\' OR project_id = ?) ORDER BY project_id').all(projectId, projectId).map((row) => parse(row.payload_json));
     const assignments = db.prepare('SELECT payload_json FROM role_assignments WHERE (? = \'\' OR project_id = ?) AND status IN (\'active\',\'current\') ORDER BY role_id,assignee_id').all(projectId, projectId).map((row) => parse(row.payload_json));
-    const events = db.prepare('SELECT lifecycle,payload_json FROM task_events WHERE (? = \'\' OR project_id = ?) ORDER BY occurred_at').all(projectId, projectId).map((row) => ({ lifecycle: row.lifecycle, ...parse(row.payload_json) }));
+    const current = db.prepare("SELECT lifecycle,payload_json FROM task_events WHERE (? = '' OR project_id = ?) AND lifecycle = 'current' ORDER BY occurred_at").all(projectId, projectId).map((row) => ({ lifecycle: row.lifecycle, ...parse(row.payload_json) }));
+    const timeline = db.prepare("SELECT lifecycle,payload_json FROM task_events WHERE (? = '' OR project_id = ?) AND lifecycle != 'current' ORDER BY occurred_at DESC LIMIT 500").all(projectId, projectId).map((row) => ({ lifecycle: row.lifecycle, ...parse(row.payload_json) })).reverse();
     return {
       source: 'control.db', projectId, projects, assignments,
-      current: events.filter((item) => item.lifecycle === 'current'),
-      timeline: events.filter((item) => item.lifecycle !== 'current'),
+      current,
+      timeline,
     };
   } finally { db.close(); }
 }
@@ -175,6 +171,8 @@ export function controlDoctor(config = {}) {
     checks.push({ name: 'single_active_assignment', ok: duplicates.length === 0, detail: duplicates.length ? json(duplicates) : 'no duplicate active roles' });
     const receiptless = db.prepare("SELECT COUNT(*) AS count FROM reports WHERE status='complete' AND COALESCE(feedback_receipt,'')='' ").get().count;
     checks.push({ name: 'receipt_backed_completion', ok: Number(receiptless) === 0, detail: `${receiptless} receipt-less completed reports` });
+    const pending = db.prepare("SELECT COUNT(*) AS count FROM reports WHERE status='feedback_finalize_pending'").get().count;
+    checks.push({ name: 'feedback_closeout_complete', ok: Number(pending) === 0, detail: `${pending} pending feedback closeouts` });
     db.close();
   } catch (error) {
     checks.push({ name: 'database', ok: false, detail: error.message });
@@ -215,18 +213,31 @@ export async function finalizeFeedback(config, reportPath, { target, receipt }) 
   if (!/\bparent_feedback_sent\s*[:=]\s*true\b/.test(content)) content += '\nparent_feedback_sent=true\n';
   if (!content.includes(receipt)) content += `\nFeedback receipt: \`${receipt}\`\n`;
   if (!content.includes(target)) content += `Feedback target: \`${target}\`\n`;
-  const temporary = `${reportPath}.${process.pid}.tmp`;
-  await writeFile(temporary, content, 'utf8');
-  await rename(temporary, reportPath);
-  const verified = await readFile(reportPath, 'utf8');
-  if (/\bparent_feedback_sent\s*[:=]\s*false\b/.test(verified) || /pending actual delivery/i.test(verified)) throw new Error('Feedback finalization remained contradictory.');
   const db = openControlDb(config);
   const reportId = stableKey('report', reportPath);
+  const timestamp = new Date().toISOString();
   db.prepare(`INSERT INTO reports(source_key,report_id,project_id,status,feedback_receipt,payload_json,updated_at) VALUES(?,?,?,?,?,?,?)
     ON CONFLICT(source_key) DO UPDATE SET status=excluded.status,feedback_receipt=excluded.feedback_receipt,payload_json=excluded.payload_json,updated_at=excluded.updated_at`)
-    .run(reportId, reportId, null, 'complete', receipt, json({ reportPath, target, receipt, parentFeedbackSent: true }), new Date().toISOString());
-  db.close();
+    .run(reportId, reportId, null, 'feedback_finalize_pending', receipt, json({ reportPath, target, receipt, parentFeedbackSent: false, processMiss: 'feedback_finalize_pending' }), timestamp);
+  const temporary = `${reportPath}.${process.pid}.tmp`;
+  try {
+    await writeFile(temporary, content, 'utf8');
+    await rename(temporary, reportPath);
+  } catch (error) {
+    db.close();
+    throw error;
+  }
+  const verified = await readFile(reportPath, 'utf8');
+  if (/\bparent_feedback_sent\s*[:=]\s*false\b/.test(verified) || /pending actual delivery/i.test(verified)) {
+    db.close();
+    throw new Error('Feedback finalization remained contradictory.');
+  }
+  try {
+    db.prepare(`INSERT INTO reports(source_key,report_id,project_id,status,feedback_receipt,payload_json,updated_at) VALUES(?,?,?,?,?,?,?)
+      ON CONFLICT(source_key) DO UPDATE SET status=excluded.status,feedback_receipt=excluded.feedback_receipt,payload_json=excluded.payload_json,updated_at=excluded.updated_at`)
+      .run(reportId, reportId, null, 'complete', receipt, json({ reportPath, target, receipt, parentFeedbackSent: true }), new Date().toISOString());
+  } finally { db.close(); }
   return { ok: true, reportPath, target, receipt };
 }
 
-export const controlPlaneInternals = { TABLES, MIGRATION, lifecycle, stableKey };
+export const controlPlaneInternals = { TABLES, MIGRATION, lifecycle: lifecycleStatus, stableKey };

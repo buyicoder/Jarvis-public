@@ -1,5 +1,7 @@
-import { mkdir, readFile, appendFile } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { mkdir, appendFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { createInterface } from 'node:readline';
 
 const TIERS = ['fast', 'balanced', 'deep'];
 const MAX_CONDITIONS = [
@@ -101,10 +103,12 @@ export async function auditTokenTelemetry(paths = []) {
   const totals = { inputTokens: 0, outputTokens: 0, cachedTokens: 0 };
   let observations = 0;
   for (const path of paths) {
-    let lines = [];
-    try { lines = (await readFile(path, 'utf8')).split(/\r?\n/).filter(Boolean); }
+    let stream;
+    try { stream = createReadStream(path, { encoding: 'utf8' }); }
     catch (error) { if (error.code === 'ENOENT') continue; throw error; }
-    for (const line of lines) {
+    stream.on('error', () => {});
+    try {
+      for await (const line of createInterface({ input: stream, crlfDelay: Infinity })) {
       let event;
       try { event = JSON.parse(line); } catch { continue; }
       if (!event.usage || typeof event.usage !== 'object') continue;
@@ -112,6 +116,9 @@ export async function auditTokenTelemetry(paths = []) {
       totals.outputTokens += Number(event.usage.outputTokens || 0);
       totals.cachedTokens += Number(event.usage.cachedTokens || 0);
       observations += 1;
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
     }
   }
   return { schema: 'jarvis-public-token-telemetry/v1', label: 'local usage telemetry, not billing', observations, totals };

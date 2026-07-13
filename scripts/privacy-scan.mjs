@@ -3,6 +3,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { lstat, mkdtemp, readFile, readlink, readdir, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { PUBLIC_FORBIDDEN_PATH_RULES } from './lib/package-privacy.mjs';
 
 const CONTENT_RULES = [
   ['mac-user-path', /\/Users\/(?!<|\$\{|user(?:name)?(?:\/|\b))[^/\s`'"]+/i],
@@ -19,15 +20,7 @@ const CONTENT_RULES = [
   ['private-server-ip', /\b(?!(?:127|0)\.)(?!169\.254\.)(?!224\.)(?:\d{1,3}\.){3}\d{1,3}\b/],
 ];
 
-const PATH_RULES = [
-  ['runtime', /(?:^|\/)runtime(?:\/|$)/i],
-  ['database', /(?:^|\/)(?:control\.db|[^/]+\.(?:db|sqlite|sqlite3))(?:$|\/)/i],
-  ['environment', /(?:^|\/)\.env(?:\.|$)/i],
-  ['private-memory', /(?:^|\/)memory\/(?:core|daily|captures|proposals|conversations|scans|financial|archive)(?:\/|$)/i],
-  ['operational-instance', /(?:^|\/)(?:reports?|ledger|roster|threads?|sessions?|cookies?|server-inventory)(?:\/|\.|-|$)/i],
-  ['evidence-binary', /(?:^|\/)[^/]+\.(?:png|jpe?g|gif|webp|pdf)$/i],
-  ['credential-file', /(?:^|\/)[^/]+\.(?:pem|key|p12|pfx)$/i],
-];
+const PATH_RULES = PUBLIC_FORBIDDEN_PATH_RULES;
 
 const EXCLUDED_CONTENT = new Set(['scripts/privacy-scan.mjs']);
 

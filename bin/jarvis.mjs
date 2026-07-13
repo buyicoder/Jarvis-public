@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { constants, existsSync } from 'node:fs';
-import { access, cp, mkdir, readdir, unlink, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { CONFIG } from '../scripts/lib/config.mjs';
@@ -105,7 +105,7 @@ async function vaultCommand() {
   if (action === 'copy') return copyVault(planPath, { confirmCopyOnly: flag('--confirm-copy-only'), dryRun: flag('--dry-run') });
   if (action === 'verify') return verifyVaultCopy(planPath);
   if (action === 'switch') {
-    const receipt = JSON.parse(await import('node:fs/promises').then(({ readFile }) => readFile(value('--receipt'), 'utf8')));
+    const receipt = JSON.parse(await readFile(value('--receipt'), 'utf8'));
     return switchVault({ planPath, receipt, configFile: CONFIG.userConfigFile });
   }
   throw new Error(`Unknown vault action: ${action}`);

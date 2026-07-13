@@ -7,14 +7,14 @@ export const PUBLIC_SCHEMA_ALLOWLIST = [
   'memory/_schemas/proposal-example.json',
 ];
 
-const FORBIDDEN_PATHS = [
-  /(?:^|\/)runtime(?:\/|$)/i,
-  /(?:^|\/)(?:control\.db|[^/]+\.(?:db|sqlite|sqlite3))(?:$|\/)/i,
-  /(?:^|\/)\.env(?:\.|$)/i,
-  /(?:^|\/)memory\/(?:core|daily|captures|proposals|conversations|scans|financial|archive)(?:\/|$)/i,
-  /(?:^|\/)(?:reports?|ledger|roster|threads?|sessions?|cookies?|server-inventory)(?:\/|\.|-|$)/i,
-  /(?:^|\/)[^/]+\.(?:png|jpe?g|gif|webp|pdf)$/i,
-  /(?:^|\/)[^/]+\.(?:pem|key|p12|pfx)$/i,
+export const PUBLIC_FORBIDDEN_PATH_RULES = [
+  ['runtime', /(?:^|\/)runtime(?:\/|$)/i],
+  ['database', /(?:^|\/)(?:control\.db|[^/]+\.(?:db|sqlite|sqlite3))(?:$|\/)/i],
+  ['environment', /(?:^|\/)\.env(?:\.|$)/i],
+  ['private-memory', /(?:^|\/)memory\/(?:core|daily|captures|proposals|conversations|scans|financial|archive)(?:\/|$)/i],
+  ['operational-instance', /(?:^|\/)(?:reports?|ledger|roster|threads?|sessions?|cookies?|server-inventory)(?:\/|\.|-|$)/i],
+  ['evidence-binary', /(?:^|\/)[^/]+\.(?:png|jpe?g|gif|webp|pdf)$/i],
+  ['credential-file', /(?:^|\/)[^/]+\.(?:pem|key|p12|pfx)$/i],
 ];
 
 async function walk(root, current = root) {
@@ -53,11 +53,11 @@ export async function assertPublicBundle(root) {
   const files = await walk(root);
   for (const file of files) {
     if (file.startsWith('node_modules/')) continue;
-    const forbidden = FORBIDDEN_PATHS.find((pattern) => pattern.test(file));
+    const forbidden = PUBLIC_FORBIDDEN_PATH_RULES.find(([, pattern]) => pattern.test(file));
     if (forbidden) throw new Error(`Forbidden package path: ${file}`);
     if (file.startsWith('memory/') && !PUBLIC_SCHEMA_ALLOWLIST.includes(file)) throw new Error(`Forbidden package path: ${file}`);
   }
   return { ok: true, root, files };
 }
 
-export const packagePrivacyInternals = { FORBIDDEN_PATHS, walk };
+export const packagePrivacyInternals = { FORBIDDEN_PATHS: PUBLIC_FORBIDDEN_PATH_RULES.map(([, pattern]) => pattern), walk };

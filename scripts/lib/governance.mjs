@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { access, copyFile, mkdir, readFile, stat } from 'node:fs/promises';
-import { dirname, isAbsolute, relative, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { isPathInside } from './path-boundary.mjs';
 
 export function classifyCodexAvailability({ binary = false, statePath = '', stateReadable = undefined } = {}) {
   const guidance = 'Install/configure a Codex adapter only if thread integration is desired.';
@@ -51,17 +52,12 @@ export function reconcileRoster(existing = [], incoming = []) {
   return [...result.values()].sort((a, b) => rosterKey(a).localeCompare(rosterKey(b)));
 }
 
-function inside(parent, child) {
-  const rel = relative(resolve(parent), resolve(child));
-  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
-}
-
 export function validatePermissionRequest(request = {}) {
   if (['production_deploy', 'external_publish', 'destructive_delete', 'credential_access'].includes(request.action)) {
     return { decision: 'needs_user_confirmation', reason: 'high_impact_action' };
   }
   const paths = request.targetPaths || [];
-  const allowed = paths.every((path) => inside(request.projectRoot || '.', path) || inside('/tmp', path));
+  const allowed = paths.every((path) => isPathInside(request.projectRoot || '.', path) || isPathInside('/tmp', path));
   return allowed
     ? { decision: 'auto_allow', reason: 'task_scoped_local_action' }
     : { decision: 'deny', reason: 'path_outside_project_boundary' };

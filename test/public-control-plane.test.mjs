@@ -83,5 +83,12 @@ test('receipt finalization replaces list-form false and pending fields atomicall
     assert.match(content, /parent_feedback_sent: true/);
     assert.match(content, /feedback_receipt: `receipt-1`/);
     assert.doesNotMatch(content, /false|pending actual delivery/i);
+    assert.equal(controlDoctor(cfg).ok, true);
+    const db = openControlDb(cfg);
+    db.prepare("UPDATE reports SET status='feedback_finalize_pending'").run();
+    db.close();
+    const interrupted = controlDoctor(cfg);
+    assert.equal(interrupted.ok, false);
+    assert.equal(interrupted.checks.find((check) => check.name === 'feedback_closeout_complete').ok, false);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
