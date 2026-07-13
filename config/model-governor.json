@@ -1,0 +1,19 @@
+{
+  "schema": "jarvis-public-model-governor/v1",
+  "mode": "recommendation_only",
+  "apply_automatically": false,
+  "profiles": ["fast", "balanced", "deep"],
+  "reasoning_efforts": ["low", "medium", "high", "max"],
+  "ultra_automatic": false,
+  "max_gate": [
+    "critical_risk",
+    "flexible_budget",
+    "two_prior_failures",
+    "irreversible",
+    "high_blast_radius",
+    "security_or_release_judgment",
+    "explicit_reason",
+    "token_budget",
+    "stop_condition"
+  ]
+}
