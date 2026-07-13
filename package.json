@@ -1,26 +1,52 @@
 {
   "name": "jarvis",
-  "version": "1.0.0",
+  "version": "1.0.0-preview.1",
   "private": true,
-  "description": "Personal AI secretary system powered by Claude Code",
+  "description": "Local-first personal chief-of-staff with an external private Vault",
   "type": "module",
+  "main": "scripts/lib/electron-main.mjs",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "bin": {
+    "jarvis": "./bin/jarvis.mjs"
+  },
   "scripts": {
-    "bootstrap": "node scripts/bootstrap.mjs",
+    "bootstrap": "node bin/jarvis.mjs init",
+    "bootstrap:github": "node scripts/bootstrap.mjs",
+    "doctor": "node bin/jarvis.mjs doctor",
+    "desktop": "electron .",
+    "dist:mac": "node scripts/package-macos.mjs",
+    "smoke:desktop": "node scripts/smoke-desktop.mjs",
+    "model:download": "node scripts/download-model.mjs",
     "index-daily": "node scripts/index-daily.mjs",
     "query": "node scripts/query.mjs",
-    "sync": "node scripts/sync-to-diary.mjs"
+    "privacy:scan": "node scripts/privacy-scan.mjs",
+    "release:check": "node scripts/release-gate.mjs",
+    "release:gate:package": "node scripts/release-gate.mjs --package",
+    "prepack": "node scripts/privacy-scan.mjs",
+    "test": "node --test"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
     "@lancedb/lancedb": "^0.17.0",
-    "classic-level": "^3.0.0",
     "gray-matter": "^4.0.3",
-    "https-proxy-agent": "^9.1.0",
-    "iconv-lite": "^0.7.2",
-    "natural": "^8.1.1",
-    "node-fetch": "^3.3.2",
-    "node-llama-cpp": "^3.18.1",
-    "playwright": "^1.61.0",
-    "xlsx": "^0.18.5"
-  }
+    "natural": "^8.1.1"
+  },
+  "devDependencies": {
+    "electron": "42.5.0",
+    "playwright": "1.61.0"
+  },
+  "files": [
+    "bin/**",
+    "config/**",
+    "scripts/**",
+    "web/**",
+    "memory/_schemas/**",
+    "skills/**",
+    "plugins/**",
+    "docs/**",
+    "README.md",
+    "LICENSE"
+  ]
 }

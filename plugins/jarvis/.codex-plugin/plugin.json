@@ -1,0 +1,15 @@
+{
+  "name": "jarvis",
+  "version": "1.0.0",
+  "description": "Use a local Jarvis workspace from Codex.",
+  "author": { "name": "Jarvis Contributors" },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Jarvis",
+    "shortDescription": "Brief, risk, capture, and handoff through local Jarvis.",
+    "longDescription": "Connect Codex to the local-first Jarvis desktop and external Vault without publishing personal memory.",
+    "developerName": "Jarvis Contributors",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Local"]
+  }
+}

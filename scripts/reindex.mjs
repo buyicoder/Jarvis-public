@@ -1,14 +1,17 @@
 import { readdirSync, existsSync } from 'fs';
-import { resolve } from 'path';
+import { relative, resolve } from 'path';
 import { execSync } from 'child_process';
 import { readMarkdown, chunkMarkdown } from './lib/knowledge-base.mjs';
 import { clearAll, upsertChunksWithIndex } from './lib/vector-store.mjs';
+import { CONFIG } from './lib/config.mjs';
+import { fileURLToPath } from 'url';
 
-const MODEL_ONNX = resolve(import.meta.dirname || '.', '..', 'index', 'models', 'bge-small-zh-v1.5', 'onnx', 'model.onnx');
+const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const MODEL_ONNX = resolve(ROOT, 'index', 'models', 'bge-small-zh-v1.5', 'onnx', 'model.onnx');
 
 if (!existsSync(MODEL_ONNX)) {
   console.log('📥 Model not found, downloading...');
-  execSync('node scripts/download-model.mjs', { stdio: 'inherit', cwd: resolve(import.meta.dirname || '.', '..') });
+  execSync('node scripts/download-model.mjs', { stdio: 'inherit', cwd: ROOT });
 }
 
 const allChunks = [];
@@ -22,7 +25,7 @@ function scanDir(dir) {
     else if (e.name.endsWith('.md')) {
       const doc = readMarkdown(p);
       if (doc && doc.content.trim()) {
-        const rel = p.replace(/\\/g, '/').split('memory/')[1] || e.name;
+        const rel = relative(CONFIG.memoryDir, p).replace(/\\/g, '/');
         const chunks = chunkMarkdown(doc.content, { source: rel, date: '2026-06-20', type: 'memory' });
         allChunks.push(...chunks);
       }
@@ -30,7 +33,7 @@ function scanDir(dir) {
   }
 }
 
-scanDir('memory');
+scanDir(CONFIG.memoryDir);
 console.log('Total chunks found:', allChunks.length);
 
 if (allChunks.length > 0) {
@@ -41,6 +44,6 @@ if (allChunks.length > 0) {
 
 // Test search
 const { search } = await import('./lib/vector-store.mjs');
-const r = await search('modfactory');
-console.log('\nTest search "modfactory":', r.length, 'results');
+const r = await search('release checklist');
+console.log('\nTest search "release checklist":', r.length, 'results');
 if (r.length > 0) console.log('  Top:', r[0].source, '| dist:', r[0]._distance.toFixed(3));

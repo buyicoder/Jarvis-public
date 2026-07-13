@@ -1,0 +1,35 @@
+{
+  "schema": "jarvis-public-parity/v2",
+  "sourcePolicy": "private checkpoint reviewed read-only; public implementation contains sanitized code, schemas, tests, and generic documentation only",
+  "softwareCapabilityParity": "complete",
+  "capabilities": {
+    "vaultLifecycle": "complete",
+    "vaultRelocation": "complete",
+    "desktopAndPackaging": "complete",
+    "canonicalControlDatabase": "complete",
+    "warRoomProjection": "complete",
+    "genericThreadGovernance": "complete",
+    "durableReportsAndReceipts": "complete",
+    "modelAndUsageGovernance": "complete",
+    "optionalProvider": "complete",
+    "optionalActivityAndAutomation": "complete",
+    "retrievalAndRadar": "complete",
+    "skillsAndPlugin": "complete"
+  },
+  "forbiddenState": [
+    "private memory and daily content",
+    "runtime databases, ledgers, reports, artifacts, screenshots and real thread records",
+    "browser rows and workstation file activity",
+    "server inventory and private network addresses",
+    "accounts, identities, cookies, tokens, credentials and environment files",
+    "absolute personal paths and project-specific records"
+  ],
+  "defaults": {
+    "externalVault": true,
+    "provider": "disabled",
+    "activity": "disabled",
+    "codexAdapter": "disabled",
+    "researchNetwork": "disabled",
+    "modelRouting": "recommendation_only"
+  }
+}

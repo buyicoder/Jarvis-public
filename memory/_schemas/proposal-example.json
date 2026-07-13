@@ -1,0 +1,13 @@
+{
+  "schema": "jarvis-public-proposal/v1",
+  "date": "2030-01-01",
+  "status": "proposed",
+  "items": [
+    {
+      "target": "memory/core/patterns/example.md",
+      "mode": "append",
+      "heading": "Reusable lesson",
+      "content": "Describe one reviewed, reusable lesson here."
+    }
+  ]
+}

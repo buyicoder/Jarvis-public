@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
+import { fileURLToPath } from 'url';
 
-const MODEL_DIR = resolve(import.meta.dirname || '.', '..', 'index', 'models', 'bge-small-zh-v1.5');
+const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const MODEL_DIR = resolve(ROOT, 'index', 'models', 'bge-small-zh-v1.5');
 const ONNX_DIR = resolve(MODEL_DIR, 'onnx');
 
 const FILES = [
@@ -18,7 +20,7 @@ const BASE = 'https://huggingface.co/Xenova/bge-small-zh-v1.5/resolve/main';
 async function main() {
   mkdirSync(ONNX_DIR, { recursive: true });
 
-  const proxy = process.env.https_proxy || process.env.HTTPS_PROXY || 'http://127.0.0.1:7890';
+  const proxy = process.env.https_proxy || process.env.HTTPS_PROXY || '';
 
   for (const f of FILES) {
     const dest = resolve(MODEL_DIR, f.path);
@@ -31,7 +33,9 @@ async function main() {
     console.log(`  📥 ${f.path} (${f.size})...`);
 
     try {
-      execSync(`curl -s --proxy ${proxy} -L "${url}" -o "${dest}"`, {
+      const args = ['-s', '-L', url, '-o', dest];
+      if (proxy) args.unshift('--proxy', proxy);
+      execFileSync('curl', args, {
         stdio: 'pipe',
         timeout: 120000,
       });
