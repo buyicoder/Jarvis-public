@@ -24,13 +24,16 @@ try {
   await page.waitForLoadState('networkidle');
   const text = await page.locator('body').innerText();
   if (text.length < 300 || !text.includes('Jarvis') || !text.includes('Today')) throw new Error('Desktop first screen is blank or incomplete.');
-  await page.locator('[data-view="war-room"]').first().click();
+  await page.locator('#initialize-demo').click();
   await page.locator('#war-room h2').waitFor({ state: 'visible' });
+  await page.getByText('Prepare the preview walkthrough').waitFor({ state: 'visible' });
   await mkdir(evidence, { recursive: true });
   const screenshot = join(evidence, 'desktop-first-run.png');
   await page.screenshot({ path: screenshot, fullPage: true });
   const status = JSON.parse(await readFile(join(sandbox, 'runtime', 'status.json'), 'utf8'));
-  console.log(JSON.stringify({ ok: true, interaction: 'war-room-opened', screenshot, memoryBoundary: status.storage === 'external_vault' }, null, 2));
+  await readFile(join(sandbox, 'vault', 'core', 'projects', 'sample-studio.md'), 'utf8');
+  await readFile(join(sandbox, 'runtime', 'control.db'));
+  console.log(JSON.stringify({ ok: true, interaction: 'synthetic-demo-opened', screenshot, memoryBoundary: status.storage === 'external_vault' }, null, 2));
 } finally {
   if (desktop) await desktop.close().catch(() => {});
   await rm(sandbox, { recursive: true, force: true });

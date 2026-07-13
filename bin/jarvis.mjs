@@ -12,6 +12,7 @@ import { classifyCodexAvailability, dispatchDecision, ingestReport, reconcileRos
 import { copyVault, planVaultCopy, switchVault, vaultStatus, verifyVaultCopy } from '../scripts/lib/vault-management.mjs';
 import { collectActivity, routeAutomation, writeDailyEvidence } from '../scripts/lib/activity-automation.mjs';
 import { providerStatus, runProviderDistill } from '../scripts/lib/provider.mjs';
+import { initializeDemoWorkspace, readDemoWorkspaceStatus } from '../scripts/lib/demo-workspace.mjs';
 
 const [command = 'help', ...args] = process.argv.slice(2);
 const flag = (name) => args.includes(name);
@@ -150,6 +151,13 @@ async function activityCommand() {
   throw new Error(`Unknown activity action: ${args[0]}`);
 }
 
+async function demoCommand() {
+  const action = args[0] || 'status';
+  if (action === 'status') return readDemoWorkspaceStatus(CONFIG);
+  if (action === 'init') return initializeDemoWorkspace(CONFIG, { confirmSynthetic: flag('--yes') });
+  throw new Error(`Unknown demo action: ${action}`);
+}
+
 async function run() {
   if (command === 'init') return init();
   if (command === 'doctor') return flag('--control-plane') ? controlDoctor(CONFIG) : doctor();
@@ -182,6 +190,7 @@ async function run() {
   if (command === 'provider' && args[0] === 'status') return providerStatus(CONFIG);
   if (command === 'activity') return activityCommand();
   if (command === 'automation') return routeAutomation({ projectId: value('--project'), roster: JSON.parse(value('--roster-json', '[]')) });
+  if (command === 'demo') return demoCommand();
   if (command === 'search') {
     const query = positionals().join(' ');
     if (!existsSync(CONFIG.vectorDbDir)) return { query, results: [], status: 'empty_index' };
@@ -192,7 +201,7 @@ async function run() {
     const { runResearchRadar } = await import('../scripts/lib/research-radar.mjs');
     return runResearchRadar({ scansDir: CONFIG.scansDir, network: args.includes('--network') });
   }
-  if (command === 'help') return { commands: ['init', 'doctor [--control-plane]', 'capture', 'distill [--provider|--write-proposal]', 'proposal create|preview|approve', 'apply [--yes]', 'morning', 'evening', 'route', 'models route|explain|evaluate', 'tokens audit [jsonl...]', 'vault status|plan|copy|verify|switch', 'control reconcile|doctor|event|backup|restore', 'war-room', 'threads codex-status|onboarding|dispatch|reconcile-roster', 'permissions', 'reports ingest|finalize-feedback', 'activity status|scan', 'automation', 'search', 'radar [--network]'] };
+  if (command === 'help') return { commands: ['init', 'doctor [--control-plane]', 'capture', 'distill [--provider|--write-proposal]', 'proposal create|preview|approve', 'apply [--yes]', 'morning', 'evening', 'route', 'models route|explain|evaluate', 'tokens audit [jsonl...]', 'vault status|plan|copy|verify|switch', 'control reconcile|doctor|event|backup|restore', 'war-room', 'threads codex-status|onboarding|dispatch|reconcile-roster', 'permissions', 'reports ingest|finalize-feedback', 'activity status|scan', 'automation', 'demo status|init --yes', 'search', 'radar [--network]'] };
   throw new Error(`Unknown command: ${command}`);
 }
 

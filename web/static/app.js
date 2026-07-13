@@ -2,6 +2,7 @@ const views = [...document.querySelectorAll('.view')];
 const nav = [...document.querySelectorAll('[data-view]')];
 const title = document.querySelector('#page-title');
 const labels = { today: 'Today', 'war-room': 'Project War Room', retrieval: 'Knowledge search', settings: 'Privacy & adapters' };
+const token = new URL(location.href).searchParams.get('token') || '';
 
 function show(id) {
   views.forEach((view) => view.classList.toggle('active', view.id === id));
@@ -35,7 +36,7 @@ function renderList(target, items, empty) {
 
 async function loadWarRoom() {
   try {
-    const response = await fetch('/api/war-room', { headers: { 'x-jarvis-token': new URL(location.href).searchParams.get('token') || '' } });
+    const response = await fetch('/api/war-room', { headers: { 'x-jarvis-token': token } });
     if (!response.ok) throw new Error(`War Room unavailable: HTTP ${response.status}`);
     const room = await response.json();
     renderList(document.querySelector('#current-list'), room.current || [], 'No current work yet. Add a synthetic project or reconcile a local manifest.');
@@ -45,6 +46,23 @@ async function loadWarRoom() {
   }
 }
 
+async function initializeDemo() {
+  const feedback = document.querySelector('#demo-feedback');
+  const button = document.querySelector('#initialize-demo');
+  button.disabled = true;
+  feedback.textContent = 'Creating synthetic local data…';
+  try {
+    const response = await fetch('/api/demo/init', { method: 'POST', headers: { 'x-jarvis-token': token } });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.guidance || 'The synthetic demo could not be created.');
+    feedback.textContent = result.alreadyInitialized ? 'Synthetic demo is already ready.' : 'Synthetic demo created. Opening War Room…';
+    show('war-room');
+  } catch (error) {
+    feedback.textContent = error.message;
+  } finally { button.disabled = false; }
+}
+
 nav.forEach((button) => button.addEventListener('click', () => show(button.dataset.view)));
 document.querySelector('#refresh-room').addEventListener('click', loadWarRoom);
+document.querySelector('#initialize-demo').addEventListener('click', initializeDemo);
 loadStatus();

@@ -23,6 +23,10 @@ test('desktop server renders a nonblank public-safe workspace and local APIs', a
     assert.equal((await fetch(`${server.url}/api/war-room`, { headers: { 'x-jarvis-token': server.token, origin: 'https://attacker.invalid' } })).status, 403);
     const room = await (await fetch(`${server.url}/api/war-room?project=demo`, { headers: { 'x-jarvis-token': server.token } })).json();
     assert.deepEqual(room.current, []);
+    assert.equal((await fetch(`${server.url}/api/demo/init`, { method: 'POST', headers: { 'x-jarvis-token': server.token } })).status, 200);
+    const demo = await (await fetch(`${server.url}/api/war-room?project=demo-studio`, { headers: { 'x-jarvis-token': server.token } })).json();
+    assert.equal(demo.projects[0].name, 'Sample Studio');
+    assert.equal((await fetch(`${server.url}/api/demo/init`, { method: 'POST' })).status, 403);
     assert.equal((await fetch(`${server.url}/../package.json`)).status, 404);
   } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
 });

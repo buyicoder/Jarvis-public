@@ -8,19 +8,20 @@
 </head>
 <body>
   <aside class="rail">
-    <div class="brand"><span class="mark">J</span><div><strong>Jarvis</strong><small>Local chief of staff</small></div></div>
+    <div class="brand"><span class="mark">J</span><div><strong>Jarvis</strong><small>Developer Preview · local only</small></div></div>
     <nav aria-label="Workspace">
       <button class="nav active" data-view="today">Today</button>
       <button class="nav" data-view="war-room">Project War Room</button>
       <button class="nav" data-view="retrieval">Knowledge search</button>
       <button class="nav" data-view="settings">Privacy & adapters</button>
     </nav>
-    <div class="boundary"><span class="dot"></span>Local-first · external Vault</div>
+    <div class="boundary"><span class="dot"></span>Developer Preview · local-first</div>
   </aside>
   <main>
     <header><div><p class="eyebrow">PRIVATE-BY-DESIGN WORKSPACE</p><h1 id="page-title">Today</h1></div><span id="health" class="pill">Starting locally…</span></header>
     <section id="today" class="view active">
       <div class="hero"><div><p class="eyebrow">FOCUS</p><h2>Choose the action that most reduces delivery risk.</h2><p>Jarvis starts offline, keeps your data in an external Vault, and asks before any provider or activity adapter is enabled.</p></div><button class="primary" data-view="war-room">Open War Room</button></div>
+      <div class="demo-callout"><div><strong>Try a synthetic workspace</strong><p>Explicit opt-in only. This adds a fictional project to a fresh local Vault and never replaces existing data.</p><small id="demo-feedback" aria-live="polite">No demo data has been created.</small></div><button id="initialize-demo">Load synthetic demo</button></div>
       <div class="grid three"><article><span>1</span><h3>Review current work</h3><p>See unresolved tasks and decisions without mixing historical items into the active view.</p></article><article><span>2</span><h3>Capture deliberately</h3><p>Raw notes remain proposals until you explicitly approve and apply them.</p></article><article><span>3</span><h3>Keep evidence durable</h3><p>Reports are hashed locally and completion requires a real receipt.</p></article></div>
     </section>
     <section id="war-room" class="view">

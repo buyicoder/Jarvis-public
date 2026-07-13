@@ -4,6 +4,7 @@ import { extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readWarRoom } from './control-plane.mjs';
+import { initializeDemoWorkspace, readDemoWorkspaceStatus } from './demo-workspace.mjs';
 import { providerStatus } from './provider.mjs';
 
 const WEB_ROOT = fileURLToPath(new URL('../../web/static/', import.meta.url));
@@ -32,6 +33,16 @@ export function createUiServer({ config }) {
           const url = new URL(request.url, 'http://127.0.0.1');
           const expectedHost = new URL(api.url).host;
           if (request.headers.host !== expectedHost) return sendJson(response, 403, { error: 'invalid_host' });
+          if (url.pathname === '/api/demo/init' && request.method === 'POST') {
+            const origin = request.headers.origin;
+            if (!authorized(request) || (origin && origin !== api.url)) return sendJson(response, 403, { error: 'local_api_forbidden' });
+            try {
+              return sendJson(response, 200, await initializeDemoWorkspace(config, { confirmSynthetic: true }));
+            } catch (error) {
+              if (/not empty/i.test(error.message)) return sendJson(response, 409, { error: 'demo_target_not_empty', guidance: 'Choose a fresh Jarvis home for the synthetic demo. Existing Vault and control state were not changed.' });
+              throw error;
+            }
+          }
           if (request.method !== 'GET') return sendJson(response, 405, { error: 'method_not_allowed' });
           if (url.pathname === '/api/status') return sendJson(response, 200, {
             running: true,
@@ -43,6 +54,10 @@ export function createUiServer({ config }) {
             const origin = request.headers.origin;
             if (!authorized(request) || (origin && origin !== api.url)) return sendJson(response, 403, { error: 'local_api_forbidden' });
             return sendJson(response, 200, readWarRoom(config, url.searchParams.get('project') || ''));
+          }
+          if (url.pathname === '/api/demo/status') {
+            if (!authorized(request)) return sendJson(response, 403, { error: 'local_api_forbidden' });
+            return sendJson(response, 200, await readDemoWorkspaceStatus(config));
           }
           const file = STATIC.get(url.pathname);
           if (!file) return sendJson(response, 404, { error: 'not_found' });
