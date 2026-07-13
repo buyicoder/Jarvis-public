@@ -136,7 +136,7 @@ async function modelCommand() {
     return route;
   }
   if (action === 'explain') return explainRoute(route);
-  if (action === 'evaluate') return evaluateRoutingFixtures([]);
+  if (action === 'evaluate') return evaluateRoutingFixtures();
   throw new Error(`Unknown models action: ${action}`);
 }
 

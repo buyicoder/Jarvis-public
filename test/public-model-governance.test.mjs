@@ -39,6 +39,12 @@ test('30 fixture evaluation is stable and mechanical tasks never use max', () =>
   assert.equal(result.promotionEligible, false);
 });
 
+test('default evaluation exposes the complete public fixture suite', () => {
+  const result = evaluateRoutingFixtures();
+  assert.equal(result.total, 30);
+  assert.equal(result.violations.length, 0);
+});
+
 test('shadow observations omit prompts and sensitive max justification', async () => {
   const root = await mkdtemp(join(tmpdir(), 'jarvis-public-model-shadow-'));
   try {

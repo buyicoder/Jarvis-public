@@ -76,7 +76,20 @@ export function explainRoute(route) {
   };
 }
 
-export function evaluateRoutingFixtures(fixtures = []) {
+export function defaultRoutingFixtures() {
+  const taskTypes = ['mechanical', 'general', 'analysis', 'release', 'security'];
+  return Array.from({ length: 30 }, (_, index) => ({
+    name: `public-routing-${String(index + 1).padStart(2, '0')}`,
+    input: {
+      taskType: taskTypes[index % taskTypes.length],
+      complexity: (index % 5) + 1,
+      risk: ['low', 'medium', 'high'][index % 3],
+      budget: index % 4 === 0 ? 'tight' : 'normal',
+    },
+  }));
+}
+
+export function evaluateRoutingFixtures(fixtures = defaultRoutingFixtures()) {
   const routes = fixtures.map((fixture) => ({ name: fixture.name, route: routeTask(fixture.input) }));
   const violations = routes.filter(({ route }, index) =>
     route.reasoningEffort === 'ultra'
