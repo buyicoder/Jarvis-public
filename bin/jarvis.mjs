@@ -188,7 +188,11 @@ async function run() {
     const { search } = await import('../scripts/lib/vector-store.mjs');
     return { query, results: await search(query) };
   }
-  if (command === 'help') return { commands: ['init', 'doctor [--control-plane]', 'capture', 'distill [--provider|--write-proposal]', 'proposal create|preview|approve', 'apply [--yes]', 'morning', 'evening', 'route', 'models route|explain|evaluate', 'tokens audit [jsonl...]', 'vault status|plan|copy|verify|switch', 'control reconcile|doctor|event|backup|restore', 'war-room', 'threads codex-status|onboarding|dispatch|reconcile-roster', 'permissions', 'reports ingest|finalize-feedback', 'activity status|scan', 'automation', 'search'] };
+  if (command === 'radar') {
+    const { runResearchRadar } = await import('../scripts/lib/research-radar.mjs');
+    return runResearchRadar({ scansDir: CONFIG.scansDir, network: args.includes('--network') });
+  }
+  if (command === 'help') return { commands: ['init', 'doctor [--control-plane]', 'capture', 'distill [--provider|--write-proposal]', 'proposal create|preview|approve', 'apply [--yes]', 'morning', 'evening', 'route', 'models route|explain|evaluate', 'tokens audit [jsonl...]', 'vault status|plan|copy|verify|switch', 'control reconcile|doctor|event|backup|restore', 'war-room', 'threads codex-status|onboarding|dispatch|reconcile-roster', 'permissions', 'reports ingest|finalize-feedback', 'activity status|scan', 'automation', 'search', 'radar [--network]'] };
   throw new Error(`Unknown command: ${command}`);
 }
 

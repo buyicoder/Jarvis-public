@@ -183,6 +183,8 @@ function fuseResults(vectorResults, bm25Results, limit) {
   return fused.slice(0, limit);
 }
 
+export const vectorStoreInternals = Object.freeze({ fuseResults });
+
 /** 创建全文索引（首次调用时自动创建） */
 let _ftsCreated = false;
 export async function ensureFTSIndex() {
