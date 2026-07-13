@@ -1,6 +1,6 @@
 {
   "name": "jarvis",
-  "version": "1.0.0",
+  "version": "1.0.0-preview.1",
   "private": true,
   "description": "Local-first personal chief-of-staff with an external private Vault",
   "type": "module",

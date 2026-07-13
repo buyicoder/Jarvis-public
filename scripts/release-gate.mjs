@@ -11,8 +11,8 @@ const checks = [
 ];
 if (packageMode) checks.push(
   ['mac-package', 'npm', ['run', 'dist:mac']],
-  ['app-bundle-privacy', process.execPath, ['scripts/privacy-scan.mjs', '--app', `dist/mac-${process.arch === 'arm64' ? 'arm64' : 'x64'}/Jarvis.app/Contents/Resources/app`]],
-  ['packaged-window', process.execPath, ['scripts/smoke-packaged-app.mjs']],
+  ['app-bundle-privacy', process.execPath, ['scripts/privacy-scan.mjs', '--app', 'dist/mac-arm64/Jarvis.app/Contents/Resources/app']],
+  ['release-archive-integrity-and-window', process.execPath, ['scripts/verify-release-artifacts.mjs', '--smoke']],
 );
 
 const results = [];

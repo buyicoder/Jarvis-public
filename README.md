@@ -2,9 +2,13 @@
 
 Jarvis is a local-first personal chief-of-staff: an external private Vault, a review-gated memory lifecycle, a canonical local control plane, and a sandboxed desktop War Room. This public repository contains the complete reusable software capability—not anyone's private state.
 
+> **Developer Preview `1.0.0-preview.1`** — for Apple Silicon Macs running macOS 12 or newer. This preview is ad-hoc signed, not Developer ID signed or notarized, has no auto-update, and is not a stable release. Back up any data you choose to create.
+
+See the [Developer Preview guide](docs/developer-preview.md) for download, checksum, install, Gatekeeper, data-location, uninstall, troubleshooting, and rollback instructions. Version-specific notes are in the [preview release record](docs/releases/v1.0.0-preview.1.md). Packaged artifacts belong on the [GitHub prerelease](https://github.com/buyicoder/Jarvis-public/releases/tag/v1.0.0-preview.1); source is available from the repository or the version tag.
+
 ## Quickstart
 
-Requirements: Node.js 22.13 or newer. No API key, Codex installation, browser access, or network connection is required.
+The source workflow requires Node.js 22.13 or newer. The packaged arm64 app does not require Node.js. No API key, Codex installation, browser access, or network connection is required for the local preview.
 
 ```bash
 git clone https://github.com/buyicoder/Jarvis-public.git
@@ -13,6 +17,9 @@ npm install
 npm run bootstrap
 npm run doctor
 
+# Optional: only on a new, empty Vault/runtime. Never overwrites existing state.
+node bin/jarvis.mjs demo init --yes
+
 node bin/jarvis.mjs capture "A reusable observation" --type learning
 node bin/jarvis.mjs distill --write-proposal
 node bin/jarvis.mjs proposal preview
@@ -20,9 +27,13 @@ node bin/jarvis.mjs proposal approve
 node bin/jarvis.mjs apply --yes
 ```
 
-Private data defaults to `~/.jarvis/vault`; operational state defaults to `~/.jarvis/runtime`. A repository-local Vault is rejected unless `JARVIS_LEGACY_REPO_MEMORY=1` is explicitly set.
+For the source CLI, private data defaults to `~/.jarvis/vault` and operational state to `~/.jarvis/runtime`. The packaged desktop uses `~/Library/Application Support/Jarvis/vault` and `~/Library/Application Support/Jarvis/runtime`. A repository-local Vault is rejected unless `JARVIS_LEGACY_REPO_MEMORY=1` is explicitly set.
 
 ## Desktop
+
+For the downloadable preview, verify its SHA256 checksum, open the DMG, and drag `Jarvis.app` to `/Applications`. Because this preview is not notarized, macOS may block a normal double-click; after verifying the checksum, Control-click the app in Finder and choose **Open**, then confirm **Open**. Do not disable Gatekeeper globally.
+
+Source launch:
 
 ```bash
 npm run desktop
@@ -34,7 +45,7 @@ The Electron window is sandboxed, uses context isolation, disables Node integrat
 npm run release:gate:package
 ```
 
-The gate tests a real packaged Electron window, performs a main interaction, saves evidence outside the repository, and scans packaged resources for forbidden state.
+The gate tests a real packaged Electron window, performs a main interaction, saves evidence outside the repository, and scans packaged resources for forbidden state. It does not turn this ad-hoc-signed preview into a notarized release.
 
 ## Capability map
 
