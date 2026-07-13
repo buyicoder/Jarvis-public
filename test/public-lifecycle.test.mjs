@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, symlink } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, stat, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -10,6 +10,7 @@ test('capture writes only to the supplied external Vault', async () => {
   const path = await capture('Keep this reusable lesson', { capturesDir: join(root, 'captures'), now: new Date('2026-01-02T03:04:05Z') });
   assert.match(path, new RegExp(`^${root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
   assert.match(await readFile(path, 'utf8'), /status: raw/);
+  assert.equal((await stat(path)).mode & 0o777, 0o600);
 });
 
 test('proposal requires approval and applies idempotently inside Vault', async () => {

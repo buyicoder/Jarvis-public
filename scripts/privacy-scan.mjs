@@ -22,14 +22,12 @@ const CONTENT_RULES = [
 
 const PATH_RULES = PUBLIC_FORBIDDEN_PATH_RULES;
 
-const EXCLUDED_CONTENT = new Set(['scripts/privacy-scan.mjs']);
-
 async function walk(root, current = root) {
   const items = [];
   for (const entry of await readdir(current, { withFileTypes: true })) {
-    if (['.git', 'node_modules', 'dist', 'index'].includes(entry.name)) continue;
     const path = join(current, entry.name);
     const file = relative(root, path).replaceAll('\\', '/');
+    if (entry.name === '.git' || entry.name === 'node_modules' || (current === root && ['dist', 'index'].includes(entry.name))) continue;
     const info = await lstat(path);
     if (info.isSymbolicLink()) {
       const target = resolve(dirname(path), await readlink(path));
@@ -53,8 +51,11 @@ function pathFindings(file, source) {
 }
 
 function contentFindings(file, source, content) {
-  if (EXCLUDED_CONTENT.has(file.replace(/^package\//, ''))) return [];
-  return CONTENT_RULES.filter(([, pattern]) => pattern.test(content)).map(([rule]) => ({ file: file.replace(/^package\//, ''), source, rule }));
+  const normalized = file.replace(/^package\//, '');
+  const scannable = normalized === 'scripts/privacy-scan.mjs'
+    ? content.replace(/const CONTENT_RULES = \[[\s\S]*?\n\];/, 'const CONTENT_RULES = [redacted rule definitions];')
+    : content;
+  return CONTENT_RULES.filter(([, pattern]) => pattern.test(scannable)).map(([rule]) => ({ file: normalized, source, rule }));
 }
 
 async function scanDirectory(root, source = 'worktree') {
@@ -72,6 +73,7 @@ async function scanDirectory(root, source = 'worktree') {
 
 async function scanGit(root) {
   const listed = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], { cwd: root, encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+  const cached = new Set(execFileSync('git', ['ls-files', '--cached'], { cwd: root, encoding: 'utf8' }).trim().split('\n').filter(Boolean));
   const findings = [];
   for (const file of listed) {
     findings.push(...pathFindings(file, 'path'));
@@ -82,7 +84,10 @@ async function scanGit(root) {
       else if (!info.isFile()) findings.push({ file, source: 'worktree', rule: 'special' });
       else findings.push(...contentFindings(file, 'worktree', await readFile(path, 'utf8')));
     } catch (error) { findings.push({ file, source: 'worktree', rule: error.code === 'ENOENT' ? 'missing' : 'unreadable' }); }
-    try { findings.push(...contentFindings(file, 'index', execFileSync('git', ['show', `:${file}`], { cwd: root, encoding: 'utf8', maxBuffer: 30 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] }))); } catch {}
+    if (cached.has(file)) {
+      try { findings.push(...contentFindings(file, 'index', execFileSync('git', ['show', `:${file}`], { cwd: root, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] }))); }
+      catch { findings.push({ file, source: 'index', rule: 'index-unreadable' }); }
+    }
   }
   return { files: listed, findings };
 }

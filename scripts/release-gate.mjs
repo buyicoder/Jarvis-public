@@ -6,7 +6,7 @@ const checks = [
   ['source-privacy', process.execPath, ['scripts/privacy-scan.mjs']],
   ['syntax', process.execPath, ['--check', 'bin/jarvis.mjs']],
   ['tests', 'npm', ['test']],
-  ['npm-pack-manifest', 'npm', ['pack', '--json', '--dry-run']],
+  ['clean-package-bootstrap', process.execPath, ['scripts/smoke-clean-package.mjs']],
   ['desktop-first-run', process.execPath, ['scripts/smoke-desktop.mjs']],
 ];
 if (packageMode) checks.push(

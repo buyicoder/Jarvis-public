@@ -16,10 +16,10 @@ export async function capture(text, { capturesDir, type = 'note', now = new Date
   if (!body) throw new Error('Capture text is required.');
   const date = localDate(now);
   const dir = join(capturesDir, date.slice(0, 4), date.slice(5, 7));
-  await mkdir(dir, { recursive: true });
+  await mkdir(dir, { recursive: true, mode: 0o700 });
   const time = now.toISOString().slice(11, 19).replaceAll(':', '');
   const path = join(dir, `${date}-${time}-${safeSlug(body)}-${randomUUID().slice(0, 8)}.md`);
-  await writeFile(path, `---\ndate: ${date}\ntype: capture\ncapture_type: ${type}\nstatus: raw\n---\n\n${body}\n`, 'utf8');
+  await writeFile(path, `---\ndate: ${date}\ntype: capture\ncapture_type: ${type}\nstatus: raw\n---\n\n${body}\n`, { encoding: 'utf8', mode: 0o600 });
   return path;
 }
 
@@ -47,10 +47,10 @@ export async function latestProposal(proposalsDir) {
 export async function createProposal({ proposalsDir, items, now = new Date() }) {
   const date = localDate(now);
   const dir = join(proposalsDir, date.slice(0, 4), date.slice(5, 7));
-  await mkdir(dir, { recursive: true });
+  await mkdir(dir, { recursive: true, mode: 0o700 });
   const path = join(dir, `${date}-${now.toISOString().slice(11, 19).replaceAll(':', '')}-${randomUUID().slice(0, 8)}-proposal.json`);
   const proposal = { schema: 'jarvis-public-proposal/v1', date, status: 'proposed', items };
-  await writeFile(path, `${JSON.stringify(proposal, null, 2)}\n`, 'utf8');
+  await writeFile(path, `${JSON.stringify(proposal, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
   return { path, proposal };
 }
 
@@ -105,7 +105,7 @@ export async function applyProposal(record, { memoryDir, now = new Date() }) {
     }
     for (const [target, items] of grouped) {
       await rejectSymlinkPath(memoryDir, target);
-      await mkdir(dirname(target), { recursive: true });
+      await mkdir(dirname(target), { recursive: true, mode: 0o700 });
       let existing = '';
       try { existing = await readFile(target, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
       const additions = [];
@@ -133,6 +133,6 @@ export async function applyProposal(record, { memoryDir, now = new Date() }) {
 
 async function atomicJson(path, value) {
   const temporary = `${path}.tmp-${process.pid}`;
-  await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
   await rename(temporary, path);
 }

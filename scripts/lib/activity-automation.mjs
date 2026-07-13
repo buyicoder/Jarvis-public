@@ -64,15 +64,15 @@ function renderActivity(activity) {
 }
 
 export async function writeDailyEvidence({ memoryDir, activity, now = new Date() }) {
-  const date = now.toISOString().slice(0, 10);
+  const date = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
   const stamp = now.toISOString();
   const content = `# Today\n\n- Date: ${date}\n- Generated: ${stamp}\n${renderActivity(activity)}\n`;
   const todayPath = join(memoryDir, 'core', 'today.md');
   const dailyPath = join(memoryDir, 'daily', date.slice(0, 4), date.slice(5, 7), `${date}-scan.md`);
-  await mkdir(dirname(todayPath), { recursive: true });
-  await mkdir(dirname(dailyPath), { recursive: true });
-  await writeFile(todayPath, content, 'utf8');
-  await appendFile(dailyPath, `\n## Scan ${stamp}\n\n${renderActivity(activity)}\n`, 'utf8');
+  await mkdir(dirname(todayPath), { recursive: true, mode: 0o700 });
+  await mkdir(dirname(dailyPath), { recursive: true, mode: 0o700 });
+  await writeFile(todayPath, content, { encoding: 'utf8', mode: 0o600 });
+  await appendFile(dailyPath, `\n## Scan ${stamp}\n\n${renderActivity(activity)}\n`, { encoding: 'utf8', mode: 0o600 });
   return { todayPath, dailyPath, date };
 }
 

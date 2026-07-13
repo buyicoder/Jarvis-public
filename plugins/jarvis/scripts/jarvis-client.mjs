@@ -18,10 +18,10 @@ function loopbackUrl(value) {
 
 export async function discoverRuntime(env = process.env) {
   const direct = loopbackUrl(env.JARVIS_RUNTIME_URL);
-  if (direct) return { available: true, url: direct, source: 'environment' };
+  if (direct) return { available: true, url: direct, token: env.JARVIS_RUNTIME_TOKEN || '', source: 'environment' };
   const status = await readJson(env.JARVIS_RUNTIME_STATUS_FILE || CONFIG.runtimeStatusFile);
   const discovered = loopbackUrl(status?.api);
-  if (discovered) return { available: true, url: discovered, source: 'status_file' };
+  if (discovered) return { available: true, url: discovered, token: status.token || '', source: 'status_file' };
   return { available: false, status: 'unavailable', reason: 'runtime_not_discovered' };
 }
 
@@ -29,7 +29,7 @@ async function getRuntime(path, { env, fetchImpl = globalThis.fetch } = {}) {
   const runtime = await discoverRuntime(env);
   if (!runtime.available) throw new Error('Jarvis runtime unavailable. Start the desktop app or set a loopback JARVIS_RUNTIME_URL.');
   try {
-    const response = await fetchImpl(`${runtime.url}${path}`, { signal: AbortSignal.timeout(5_000) });
+    const response = await fetchImpl(`${runtime.url}${path}`, { headers: { 'x-jarvis-token': runtime.token }, signal: AbortSignal.timeout(5_000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   } catch (error) {

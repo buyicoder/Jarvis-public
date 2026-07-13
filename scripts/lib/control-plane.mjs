@@ -96,7 +96,7 @@ function upsertEvent(db, value, sourceKey) {
       .run(taskId, value.projectId || null, value.ownerId || null, value.status || 'unknown', json(value), now(value));
   }
   db.prepare(`INSERT INTO task_events(source_key,task_id,project_id,event_type,lifecycle,payload_json,occurred_at) VALUES(?,?,?,?,?,?,?)
-    ON CONFLICT(source_key) DO UPDATE SET lifecycle=excluded.lifecycle,payload_json=excluded.payload_json,occurred_at=excluded.occurred_at`)
+    ON CONFLICT(source_key) DO UPDATE SET task_id=excluded.task_id,project_id=excluded.project_id,event_type=excluded.event_type,lifecycle=excluded.lifecycle,payload_json=excluded.payload_json,occurred_at=excluded.occurred_at`)
     .run(sourceKey || stableKey('event', eventId), taskId, value.projectId || null, value.type || 'note', lifecycleStatus(value), json({ ...value, eventId }), now(value));
   if (value.type === 'decision') {
     db.prepare(`INSERT INTO decisions(source_key,project_id,status,payload_json,updated_at) VALUES(?,?,?,?,?)
@@ -126,6 +126,10 @@ export async function reconcileControlPlane(config = {}) {
     for (const project of projects.projects || []) {
       upsertProject(db, project);
       for (const role of project.roles || project.assignments || []) {
+        if (role.roleId === 'jarvis-root' || role.role === 'jarvis-root' || role.immutable === true) {
+          const existing = db.prepare("SELECT assignee_id FROM role_assignments WHERE project_id=? AND role_id=? AND status IN ('active','current') LIMIT 1").get(project.projectId || project.id, role.roleId || role.role);
+          if (existing && existing.assignee_id !== (role.assigneeId || role.threadId || role.ownerId)) throw new Error('Immutable root assignment cannot be replaced.');
+        }
         upsertAssignment(db, project.projectId || project.id, role, stableKey('assignment', `${project.projectId || project.id}:${role.roleId || role.role}:${role.assigneeId || role.threadId}`));
       }
     }
@@ -199,7 +203,11 @@ export async function restoreControlDb(config, backup) {
   const temporary = `${target}.restore-${process.pid}`;
   await copyFile(source, temporary);
   const probe = new DatabaseSync(temporary, { readOnly: true });
-  probe.prepare('SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1').get();
+  const integrity = probe.prepare('PRAGMA integrity_check').get().integrity_check;
+  if (integrity !== 'ok') { probe.close(); throw new Error(`Control backup integrity failed: ${integrity}`); }
+  const version = probe.prepare('SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1').get()?.version;
+  const actual = new Set(probe.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((row) => row.name));
+  if (version !== 1 || !TABLES.every((table) => actual.has(table))) { probe.close(); throw new Error('Control backup schema is incomplete or incompatible.'); }
   probe.close();
   await rename(temporary, target);
   return target;

@@ -19,7 +19,9 @@ test('desktop server renders a nonblank public-safe workspace and local APIs', a
     const status = await (await fetch(`${server.url}/api/status`)).json();
     assert.equal(status.running, true);
     assert.equal(status.integrations.activity, 'disabled');
-    const room = await (await fetch(`${server.url}/api/war-room?project=demo`)).json();
+    assert.equal((await fetch(`${server.url}/api/war-room?project=demo`)).status, 403);
+    assert.equal((await fetch(`${server.url}/api/war-room`, { headers: { 'x-jarvis-token': server.token, origin: 'https://attacker.invalid' } })).status, 403);
+    const room = await (await fetch(`${server.url}/api/war-room?project=demo`, { headers: { 'x-jarvis-token': server.token } })).json();
     assert.deepEqual(room.current, []);
     assert.equal((await fetch(`${server.url}/../package.json`)).status, 404);
   } finally { await server.close(); await rm(root, { recursive: true, force: true }); }

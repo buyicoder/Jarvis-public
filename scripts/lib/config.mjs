@@ -1,7 +1,8 @@
 import { fileURLToPath } from 'url';
-import { delimiter, dirname, isAbsolute, relative, resolve } from 'path';
+import { delimiter, dirname, resolve } from 'path';
 import { homedir } from 'os';
-import { existsSync, readFileSync, realpathSync } from 'fs';
+import { readFileSync } from 'fs';
+import { canonicalPath, isPathInside } from './path-boundary.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,12 +20,7 @@ const MEMORY_DIR = resolve(
 );
 const RUNTIME_DIR = resolve(process.env.JARVIS_RUNTIME_DIR || resolve(JARVIS_HOME, 'runtime'));
 const explicitLegacy = process.env.JARVIS_LEGACY_REPO_MEMORY === '1';
-const canonical = (path) => existsSync(path) ? realpathSync.native(path) : resolve(path);
-const isInside = (parent, child, normalize = resolve) => {
-  const rel = relative(normalize(parent), normalize(child));
-  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
-};
-if (!explicitLegacy && (isInside(ROOT_DIR, MEMORY_DIR) || isInside(ROOT_DIR, MEMORY_DIR, canonical))) {
+if (!explicitLegacy && (isPathInside(ROOT_DIR, MEMORY_DIR) || isPathInside(ROOT_DIR, MEMORY_DIR, canonicalPath))) {
   throw new Error('Refusing a repository-local Vault. Set an external JARVIS_VAULT_DIR, or explicitly opt into JARVIS_LEGACY_REPO_MEMORY=1.');
 }
 

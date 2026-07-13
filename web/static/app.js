@@ -24,14 +24,20 @@ function renderList(target, items, empty) {
   for (const item of items) {
     const row = document.createElement('div');
     row.className = 'item';
-    row.innerHTML = `<strong>${item.summary || item.type || 'Local item'}</strong><small>${item.status || 'current'}</small>`;
+    const itemTitle = document.createElement('strong');
+    itemTitle.textContent = item.summary || item.type || 'Local item';
+    const itemStatus = document.createElement('small');
+    itemStatus.textContent = item.status || 'current';
+    row.append(itemTitle, itemStatus);
     target.append(row);
   }
 }
 
 async function loadWarRoom() {
   try {
-    const room = await fetch('/api/war-room').then((response) => response.json());
+    const response = await fetch('/api/war-room', { headers: { 'x-jarvis-token': new URL(location.href).searchParams.get('token') || '' } });
+    if (!response.ok) throw new Error(`War Room unavailable: HTTP ${response.status}`);
+    const room = await response.json();
     renderList(document.querySelector('#current-list'), room.current || [], 'No current work yet. Add a synthetic project or reconcile a local manifest.');
     renderList(document.querySelector('#timeline-list'), room.timeline || [], 'Resolved and superseded work appears here.');
   } catch {

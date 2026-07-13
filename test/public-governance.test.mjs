@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
@@ -47,6 +47,17 @@ test('permission broker contains writes to declared project and tmp boundaries',
   assert.equal(validatePermissionRequest({ action: 'write', targetPaths: ['/tmp/demo-report.md'], projectRoot }).decision, 'auto_allow');
   assert.equal(validatePermissionRequest({ action: 'write', targetPaths: ['/workspace/other/secret'], projectRoot }).decision, 'deny');
   assert.equal(validatePermissionRequest({ action: 'production_deploy', targetPaths: [], projectRoot }).decision, 'needs_user_confirmation');
+});
+
+test('permission broker rejects symlink traversal outside the project', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'jarvis-public-permission-'));
+  try {
+    const project = join(root, 'project');
+    const outside = join(root, 'outside');
+    await Promise.all([mkdir(project), mkdir(outside)]);
+    await symlink(outside, join(project, 'link'));
+    assert.equal(validatePermissionRequest({ action: 'write', targetPaths: [join(project, 'link', 'secret.md')], projectRoot: project }).decision, 'deny');
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test('durable report ingest hashes content and stores large evidence by reference', async () => {

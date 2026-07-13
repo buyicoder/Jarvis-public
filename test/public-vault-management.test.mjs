@@ -44,3 +44,19 @@ test('Vault copy rejects non-empty targets and changed sources', async () => {
     await assert.rejects(() => copyVault(planPath, { confirmCopyOnly: true }), /source changed/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test('Vault switch rejects a target changed after its PASS receipt', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'jarvis-public-vault-stale-'));
+  try {
+    const source = join(root, 'source');
+    const target = join(root, 'target');
+    const planPath = join(root, 'plan.json');
+    await mkdir(source, { recursive: true });
+    await writeFile(join(source, 'note.md'), 'original');
+    await planVaultCopy({ source, target, planPath });
+    await copyVault(planPath, { confirmCopyOnly: true });
+    const receipt = await verifyVaultCopy(planPath);
+    await writeFile(join(target, 'note.md'), 'tampered');
+    await assert.rejects(switchVault({ planPath, receipt, configFile: join(root, 'config.json') }), /changed after verification/i);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

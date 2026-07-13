@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -55,6 +55,16 @@ test('repository-local Vault requires explicit legacy mode', () => {
   const repoRoot = fileURLToPath(new URL('..', import.meta.url));
   assert.throws(() => execFileSync(process.execPath, [cli, 'doctor'], {
     encoding: 'utf8', env: { ...process.env, JARVIS_VAULT_DIR: join(repoRoot, 'memory'), JARVIS_LEGACY_REPO_MEMORY: '0' },
+  }), /Command failed/);
+});
+
+test('repository-local Vault rejects a missing child through a symlinked ancestor', async () => {
+  const repoRoot = fileURLToPath(new URL('..', import.meta.url));
+  const root = await mkdtemp(join(tmpdir(), 'jarvis-repo-link-'));
+  const link = join(root, 'repo-link');
+  await symlink(repoRoot, link);
+  assert.throws(() => execFileSync(process.execPath, [cli, 'doctor'], {
+    encoding: 'utf8', env: { ...process.env, JARVIS_VAULT_DIR: join(link, 'new-vault'), JARVIS_LEGACY_REPO_MEMORY: '0' },
   }), /Command failed/);
 });
 

@@ -27,11 +27,11 @@ function positionals(excludedOptions = new Set()) {
 
 async function init() {
   const dirs = ['core/projects', 'daily', 'captures', 'proposals', 'archive', 'conversations', 'scans', '_schemas'];
-  await Promise.all(dirs.map((dir) => mkdir(join(CONFIG.memoryDir, dir), { recursive: true })));
+  await Promise.all(dirs.map((dir) => mkdir(join(CONFIG.memoryDir, dir), { recursive: true, mode: 0o700 })));
   for (const file of await readdir(CONFIG.schemasDir)) {
     if (/\.(?:md|json)$/.test(file)) await cp(join(CONFIG.schemasDir, file), join(CONFIG.memoryDir, '_schemas', file), { force: false }).catch((error) => { if (error.code !== 'EEXIST') throw error; });
   }
-  await mkdir(CONFIG.runtimeDir, { recursive: true });
+  await mkdir(CONFIG.runtimeDir, { recursive: true, mode: 0o700 });
   return { initialized: true, memoryDir: CONFIG.memoryDir, runtimeDir: CONFIG.runtimeDir, repoMemory: CONFIG.isLegacyRepoMemory };
 }
 

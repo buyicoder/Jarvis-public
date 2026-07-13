@@ -30,7 +30,7 @@ try {
   const screenshot = join(evidence, 'desktop-first-run.png');
   await page.screenshot({ path: screenshot, fullPage: true });
   const status = JSON.parse(await readFile(join(sandbox, 'runtime', 'status.json'), 'utf8'));
-  console.log(JSON.stringify({ ok: true, interaction: 'war-room-opened', screenshot, memoryBoundary: status.memoryDir === join(sandbox, 'vault') }, null, 2));
+  console.log(JSON.stringify({ ok: true, interaction: 'war-room-opened', screenshot, memoryBoundary: status.storage === 'external_vault' }, null, 2));
 } finally {
   if (desktop) await desktop.close().catch(() => {});
   await rm(sandbox, { recursive: true, force: true });

@@ -72,6 +72,37 @@ test('dual writes, doctor and backup restore preserve a valid projection', async
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
+test('event corrections move every indexed projection column', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'jarvis-public-event-move-'));
+  try {
+    const cfg = config(root);
+    await writeControlEvent(cfg, { eventId: 'same', projectId: 'a', taskId: 'old', type: 'task', status: 'active' });
+    await writeControlEvent(cfg, { eventId: 'same', projectId: 'b', taskId: 'new', type: 'decision', status: 'active' });
+    assert.equal(readWarRoom(cfg, 'a').current.length, 0);
+    assert.equal(readWarRoom(cfg, 'b').current[0].taskId, 'new');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('reconcile rejects immutable root reassignment and restore rejects incomplete schema', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'jarvis-public-invariants-'));
+  try {
+    const cfg = config(root);
+    await import('node:fs/promises').then(({ mkdir }) => mkdir(join(root, 'legacy'), { recursive: true }));
+    await writeFile(cfg.legacyProjectsFile, JSON.stringify({ projects: [{ projectId: 'demo', roles: [{ roleId: 'jarvis-root', assigneeId: 'root-a' }] }] }));
+    await writeFile(cfg.legacyEventsFile, '');
+    await reconcileControlPlane(cfg);
+    await writeFile(cfg.legacyProjectsFile, JSON.stringify({ projects: [{ projectId: 'demo', roles: [{ roleId: 'jarvis-root', assigneeId: 'root-b' }] }] }));
+    await assert.rejects(reconcileControlPlane(cfg), /cannot be replaced/i);
+    const malformed = join(root, 'malformed.db');
+    const { DatabaseSync } = await import('node:sqlite');
+    const db = new DatabaseSync(malformed);
+    db.exec('CREATE TABLE schema_migrations(version INTEGER); INSERT INTO schema_migrations VALUES(1)');
+    db.close();
+    await assert.rejects(restoreControlDb(cfg, malformed), /schema is incomplete/i);
+    assert.equal(controlDoctor(cfg).checks.find((check) => check.name === 'schema').ok, true);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test('receipt finalization replaces list-form false and pending fields atomically', async () => {
   const root = await mkdtemp(join(tmpdir(), 'jarvis-public-feedback-'));
   try {

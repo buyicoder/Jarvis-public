@@ -27,6 +27,7 @@ for (const entry of ['bin', 'config', 'scripts', 'web', 'skills', 'plugins', 'do
 await copySanitizedSchemas(root, resources);
 run('npm', ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: resources });
 await assertPublicBundle(resources);
+run(process.execPath, [join(resources, 'scripts', 'privacy-scan.mjs'), '--app', resources]);
 
 const plist = join(app, 'Contents', 'Info.plist');
 setPlist(plist, 'CFBundleDisplayName', name);

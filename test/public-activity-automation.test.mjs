@@ -39,3 +39,11 @@ test('daily evidence overwrites today and appends timestamped history', async ()
     assert.match(await readFile(result.dailyPath, 'utf8'), /example\.org/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test('daily evidence uses the local calendar day near UTC midnight', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'jarvis-public-local-day-'));
+  try {
+    const result = await writeDailyEvidence({ memoryDir: root, now: new Date('2026-07-12T16:30:00Z'), activity: { enabled: false, status: 'disabled', sensors: {} } });
+    assert.match(result.dailyPath, /2026-07-13-scan\.md$/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

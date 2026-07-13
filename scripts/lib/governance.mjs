@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { access, copyFile, mkdir, readFile, stat } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { isPathInside } from './path-boundary.mjs';
+import { isPathInsideCanonical } from './path-boundary.mjs';
 
 export function classifyCodexAvailability({ binary = false, statePath = '', stateReadable = undefined } = {}) {
   const guidance = 'Install/configure a Codex adapter only if thread integration is desired.';
@@ -57,7 +57,7 @@ export function validatePermissionRequest(request = {}) {
     return { decision: 'needs_user_confirmation', reason: 'high_impact_action' };
   }
   const paths = request.targetPaths || [];
-  const allowed = paths.every((path) => isPathInside(request.projectRoot || '.', path) || isPathInside('/tmp', path));
+  const allowed = paths.every((path) => isPathInsideCanonical(request.projectRoot || '.', path) || isPathInsideCanonical('/tmp', path));
   return allowed
     ? { decision: 'auto_allow', reason: 'task_scoped_local_action' }
     : { decision: 'deny', reason: 'path_outside_project_boundary' };

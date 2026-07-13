@@ -95,6 +95,8 @@ export async function switchVault({ planPath, receipt, configFile }) {
   if (receipt?.status !== 'pass' || receipt.planId !== plan.planId || receipt.planSha256 !== plan.planSha256 || receipt.target !== plan.target) {
     throw new Error('Vault switch requires a matching PASS verification receipt.');
   }
+  const targetFiles = await listFiles(plan.target);
+  if (JSON.stringify(targetFiles) !== JSON.stringify(plan.files)) throw new Error('Target Vault changed after verification.');
   const config = existsSync(configFile) ? JSON.parse(await readFile(configFile, 'utf8')) : {};
   const updated = { ...config, verifiedVaultDir: plan.target, vaultReceipt: { planId: plan.planId, planSha256: plan.planSha256, verifiedAt: receipt.verifiedAt } };
   await mkdir(dirname(configFile), { recursive: true });

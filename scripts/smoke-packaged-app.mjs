@@ -17,6 +17,7 @@ const sandbox = await mkdtemp(join(tmpdir(), 'jarvis-public-packaged-'));
 const evidence = process.env.JARVIS_EVIDENCE_DIR || await mkdtemp(join(tmpdir(), 'jarvis-public-evidence-'));
 const errors = [];
 const externalRequests = [];
+const startupAuditFile = join(sandbox, 'startup-audit.json');
 let packaged;
 const attach = (page) => {
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
@@ -34,6 +35,7 @@ try {
     JARVIS_CODEX_ADAPTER: '0',
     JARVIS_PROVIDER_ENABLED: '0',
     JARVIS_PROVIDER_API_KEY: '',
+    JARVIS_STARTUP_AUDIT_FILE: startupAuditFile,
   } });
   packaged.on('window', attach);
   packaged.windows().forEach(attach);
@@ -47,7 +49,10 @@ try {
   if (errors.length) throw new Error(`Renderer errors: ${errors.join(' | ')}`);
   if (externalRequests.length) throw new Error(`Unexpected external request: ${externalRequests[0]}`);
   const status = JSON.parse(await readFile(join(sandbox, 'runtime', 'status.json'), 'utf8'));
-  if (status.memoryDir !== join(sandbox, 'vault')) throw new Error('Packaged app escaped the isolated Vault.');
+  if (status.storage !== 'external_vault') throw new Error('Packaged app did not confirm its external Vault boundary.');
+  const startupAudit = JSON.parse(await readFile(startupAuditFile, 'utf8'));
+  if (startupAudit.rendererErrors.length) throw new Error(`Startup renderer errors: ${startupAudit.rendererErrors.join(' | ')}`);
+  if (startupAudit.externalRequests.length) throw new Error(`Startup external request: ${startupAudit.externalRequests[0]}`);
   await mkdir(evidence, { recursive: true });
   const screenshot = join(evidence, 'packaged-war-room.png');
   await page.screenshot({ path: screenshot, fullPage: true });
