@@ -3,6 +3,8 @@ index/models/
 knowledge-base/
 vector-db/
 node_modules/
+dist/
+.DS_Store
 .env
 .jarvis/
 runtime/

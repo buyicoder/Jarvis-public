@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jarvis</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <aside class="rail">
+    <div class="brand"><span class="mark">J</span><div><strong>Jarvis</strong><small>Local chief of staff</small></div></div>
+    <nav aria-label="Workspace">
+      <button class="nav active" data-view="today">Today</button>
+      <button class="nav" data-view="war-room">Project War Room</button>
+      <button class="nav" data-view="retrieval">Knowledge search</button>
+      <button class="nav" data-view="settings">Privacy & adapters</button>
+    </nav>
+    <div class="boundary"><span class="dot"></span>Local-first · external Vault</div>
+  </aside>
+  <main>
+    <header><div><p class="eyebrow">PRIVATE-BY-DESIGN WORKSPACE</p><h1 id="page-title">Today</h1></div><span id="health" class="pill">Starting locally…</span></header>
+    <section id="today" class="view active">
+      <div class="hero"><div><p class="eyebrow">FOCUS</p><h2>Choose the action that most reduces delivery risk.</h2><p>Jarvis starts offline, keeps your data in an external Vault, and asks before any provider or activity adapter is enabled.</p></div><button class="primary" data-view="war-room">Open War Room</button></div>
+      <div class="grid three"><article><span>1</span><h3>Review current work</h3><p>See unresolved tasks and decisions without mixing historical items into the active view.</p></article><article><span>2</span><h3>Capture deliberately</h3><p>Raw notes remain proposals until you explicitly approve and apply them.</p></article><article><span>3</span><h3>Keep evidence durable</h3><p>Reports are hashed locally and completion requires a real receipt.</p></article></div>
+    </section>
+    <section id="war-room" class="view">
+      <div class="section-head"><div><p class="eyebrow">CANONICAL CONTROL PLANE</p><h2>Project War Room</h2></div><button id="refresh-room">Refresh</button></div>
+      <div class="grid two"><article><h3>Current unresolved</h3><div id="current-list" class="empty">No current work yet. Add a synthetic project or reconcile a local manifest.</div></article><article><h3>Timeline</h3><div id="timeline-list" class="empty">Resolved and superseded work appears here.</div></article></div>
+    </section>
+    <section id="retrieval" class="view"><p class="eyebrow">SCAR · BM25 · VECTOR · RRF</p><h2>Knowledge search</h2><p class="lead">Index your own Vault locally. An empty index returns a controlled empty result and never requires a provider key.</p><div class="search"><input aria-label="Search query" placeholder="Search your local knowledge"><button>Search locally</button></div></section>
+    <section id="settings" class="view"><p class="eyebrow">EXPLICIT OPT-IN</p><h2>Privacy & adapters</h2><div id="adapter-grid" class="grid three"><article><h3>Activity metadata</h3><p>Disabled by default. When enabled, only aggregate domains, counts, and time buckets are retained.</p></article><article><h3>Model provider</h3><p>Disabled until you supply an endpoint, model, and key through local configuration.</p></article><article><h3>Codex integration</h3><p>Optional adapter. Missing binary or state produces an unavailable status, never a broken app.</p></article></div></section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

@@ -4,8 +4,9 @@
   "private": true,
   "description": "Local-first personal chief-of-staff with an external private Vault",
   "type": "module",
+  "main": "scripts/lib/electron-main.mjs",
   "engines": {
-    "node": ">=20.11"
+    "node": ">=22.13"
   },
   "bin": {
     "jarvis": "./bin/jarvis.mjs"
@@ -14,12 +15,16 @@
     "bootstrap": "node bin/jarvis.mjs init",
     "bootstrap:github": "node scripts/bootstrap.mjs",
     "doctor": "node bin/jarvis.mjs doctor",
+    "desktop": "electron .",
+    "dist:mac": "node scripts/package-macos.mjs",
+    "smoke:desktop": "node scripts/smoke-desktop.mjs",
     "model:download": "node scripts/download-model.mjs",
     "index-daily": "node scripts/index-daily.mjs",
     "query": "node scripts/query.mjs",
     "privacy:scan": "node scripts/privacy-scan.mjs",
-    "release:check": "npm test && npm run privacy:scan",
-    "prepack": "npm run release:check",
+    "release:check": "node scripts/release-gate.mjs",
+    "release:gate:package": "node scripts/release-gate.mjs --package",
+    "prepack": "node scripts/privacy-scan.mjs",
     "test": "node --test"
   },
   "dependencies": {
@@ -27,5 +32,21 @@
     "@lancedb/lancedb": "^0.17.0",
     "gray-matter": "^4.0.3",
     "natural": "^8.1.1"
-  }
+  },
+  "devDependencies": {
+    "electron": "42.5.0",
+    "playwright": "1.61.0"
+  },
+  "files": [
+    "bin/**",
+    "config/**",
+    "scripts/**",
+    "web/**",
+    "memory/_schemas/**",
+    "skills/**",
+    "plugins/**",
+    "docs/**",
+    "README.md",
+    "LICENSE"
+  ]
 }

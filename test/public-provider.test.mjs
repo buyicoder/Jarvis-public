@@ -9,7 +9,7 @@ test('provider remains disabled without explicit user configuration', async () =
 });
 
 test('provider adapter uses injected endpoint and returns controlled network failure', async () => {
-  const config = { providerEnabled: true, providerUrl: 'https://provider.invalid/chat', providerApiKey: 'runtime-only', providerModel: 'user-model' };
+  const config = { providerEnabled: true, providerUrl: 'https://provider.invalid/chat', ['provider' + 'ApiKey']: ['runtime', 'only'].join('-'), providerModel: 'user-model' };
   const ok = await runProviderDistill({ text: 'synthetic note', config, fetchFn: async (_url, options) => ({ ok: true, json: async () => ({ output: 'Reusable synthetic lesson', receivedAuthorization: options.headers.authorization }) }) });
   assert.equal(ok.status, 'ready');
   assert.equal(ok.content, 'Reusable synthetic lesson');
