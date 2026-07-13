@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
@@ -32,6 +32,10 @@ test('control database migrates every canonical public table', async () => {
       assert.ok(tables.includes(name), `missing ${name}`);
     }
     db.close();
+    assert.equal((await stat(join(root, 'runtime'))).mode & 0o777, 0o700);
+    assert.equal((await stat(join(root, 'runtime', 'control.db'))).mode & 0o777, 0o600);
+    const journal = await stat(join(root, 'runtime', 'control.db-journal')).catch(() => null);
+    if (journal) assert.equal(journal.mode & 0o777, 0o600);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
@@ -66,9 +70,24 @@ test('dual writes, doctor and backup restore preserve a valid projection', async
     await writeControlEvent(cfg, { eventId: 'e1', projectId: 'demo', taskId: 't1', type: 'task', status: 'active', summary: 'Ship' });
     assert.equal(controlDoctor(cfg).ok, true);
     const backup = await backupControlDb(cfg, join(root, 'backup', 'control.db'));
+    assert.equal((await stat(join(root, 'backup'))).mode & 0o777, 0o700);
+    assert.equal((await stat(backup)).mode & 0o777, 0o600);
     await writeControlEvent(cfg, { eventId: 'e2', projectId: 'demo', taskId: 't2', type: 'task', status: 'active', summary: 'Extra' });
     await restoreControlDb(cfg, backup);
     assert.deepEqual(readWarRoom(cfg, 'demo').current.map((item) => item.eventId), ['e1']);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('backup preserves an existing caller-owned output directory mode', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'jarvis-public-backup-mode-'));
+  try {
+    const cfg = config(root);
+    await writeControlEvent(cfg, { eventId: 'mode', status: 'active' });
+    const output = join(root, 'shared-output');
+    await mkdir(output, { mode: 0o755 });
+    await chmod(output, 0o755);
+    await backupControlDb(cfg, join(output, 'control.db'));
+    assert.equal((await stat(output)).mode & 0o777, 0o755);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

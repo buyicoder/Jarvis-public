@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
-import { copyFile, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
-import { existsSync, mkdirSync } from 'node:fs';
+import { chmod, copyFile, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { lifecycleStatus } from './governance.mjs';
 
@@ -48,18 +48,28 @@ export function controlDbPath(config = {}) {
 
 export function openControlDb(config = {}) {
   const path = controlDbPath(config);
-  mkdirSync(dirname(path), { recursive: true });
-  const db = new DatabaseSync(path);
-  db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = DELETE;');
-  db.exec('BEGIN IMMEDIATE');
+  const directory = dirname(path);
+  const previousUmask = process.umask(0o077);
+  let db;
   try {
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    chmodSync(directory, 0o700);
+    db = new DatabaseSync(path);
+    chmodSync(path, 0o600);
+    db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = PERSIST; PRAGMA journal_size_limit = 0;');
+    db.exec('BEGIN IMMEDIATE');
     db.exec(MIGRATION);
     db.prepare('INSERT OR IGNORE INTO schema_migrations(version,name,applied_at) VALUES(1,?,?)').run('public-control-plane-v1', new Date().toISOString());
     db.exec('COMMIT');
+    if (existsSync(`${path}-journal`)) chmodSync(`${path}-journal`, 0o600);
   } catch (error) {
-    db.exec('ROLLBACK');
-    db.close();
+    if (db) {
+      try { db.exec('ROLLBACK'); } catch {}
+      db.close();
+    }
     throw error;
+  } finally {
+    process.umask(previousUmask);
   }
   return db;
 }
@@ -188,10 +198,20 @@ export async function backupControlDb(config, output) {
   const source = controlDbPath(config);
   if (!existsSync(source)) throw new Error(`Control database not found: ${source}`);
   const target = resolve(output || `${source}.backup`);
-  await mkdir(dirname(target), { recursive: true });
+  const outputDirectory = dirname(target);
+  if (!existsSync(outputDirectory)) {
+    await mkdir(outputDirectory, { recursive: true, mode: 0o700 });
+    await chmod(outputDirectory, 0o700);
+  }
   const db = openControlDb(config);
-  db.exec(`VACUUM INTO '${target.replaceAll("'", "''")}'`);
-  db.close();
+  const previousUmask = process.umask(0o077);
+  try {
+    db.exec(`VACUUM INTO '${target.replaceAll("'", "''")}'`);
+  } finally {
+    process.umask(previousUmask);
+    db.close();
+  }
+  await chmod(target, 0o600);
   return target;
 }
 
@@ -199,9 +219,11 @@ export async function restoreControlDb(config, backup) {
   const source = resolve(backup);
   if (!(await stat(source)).isFile()) throw new Error('Control backup must be a file.');
   const target = controlDbPath(config);
-  await mkdir(dirname(target), { recursive: true });
+  await mkdir(dirname(target), { recursive: true, mode: 0o700 });
+  await chmod(dirname(target), 0o700);
   const temporary = `${target}.restore-${process.pid}`;
   await copyFile(source, temporary);
+  await chmod(temporary, 0o600);
   const probe = new DatabaseSync(temporary, { readOnly: true });
   const integrity = probe.prepare('PRAGMA integrity_check').get().integrity_check;
   if (integrity !== 'ok') { probe.close(); throw new Error(`Control backup integrity failed: ${integrity}`); }
@@ -210,6 +232,7 @@ export async function restoreControlDb(config, backup) {
   if (version !== 1 || !TABLES.every((table) => actual.has(table))) { probe.close(); throw new Error('Control backup schema is incomplete or incompatible.'); }
   probe.close();
   await rename(temporary, target);
+  await chmod(target, 0o600);
   return target;
 }
 
