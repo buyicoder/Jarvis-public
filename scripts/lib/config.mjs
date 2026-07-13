@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'url';
-import { dirname, isAbsolute, relative, resolve } from 'path';
+import { delimiter, dirname, isAbsolute, relative, resolve } from 'path';
 import { homedir } from 'os';
 import { existsSync, readFileSync, realpathSync } from 'fs';
 
@@ -66,7 +66,7 @@ export const CONFIG = {
   providerModel: process.env.JARVIS_PROVIDER_MODEL || '',
   providerApiKey: process.env.JARVIS_PROVIDER_API_KEY || '',
   activityOptIn: process.env.JARVIS_ACTIVITY_OPT_IN === '1',
-  browserHistoryPaths: (process.env.JARVIS_BROWSER_HISTORY_PATHS || '').split(':').filter(Boolean),
+  browserHistoryPaths: (process.env.JARVIS_BROWSER_HISTORY_PATHS || '').split(delimiter).filter(Boolean),
   codexAdapterEnabled: process.env.JARVIS_CODEX_ADAPTER === '1',
   codexStatePath: process.env.JARVIS_CODEX_STATE_PATH || '',
 

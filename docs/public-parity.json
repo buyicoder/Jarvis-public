@@ -1,30 +1,35 @@
 {
-  "schema": "jarvis-public-parity/v1",
-  "sourcePolicy": "private repository audited read-only; public implementation is sanitized and independently tested",
-  "safe_to_sync_now": [
-    "external Vault path boundary",
-    "offline bootstrap and doctor",
-    "capture, deterministic distill, proposal preview/approve/apply lifecycle",
-    "daily morning briefing skeleton",
-    "recommendation-only generic model governor",
-    "SCAR chunking, BM25 fallback, research radar"
+  "schema": "jarvis-public-parity/v2",
+  "sourcePolicy": "private checkpoint reviewed read-only; public implementation contains sanitized code, schemas, tests, and generic documentation only",
+  "softwareCapabilityParity": "complete",
+  "capabilities": {
+    "vaultLifecycle": "complete",
+    "vaultRelocation": "complete",
+    "desktopAndPackaging": "complete",
+    "canonicalControlDatabase": "complete",
+    "warRoomProjection": "complete",
+    "genericThreadGovernance": "complete",
+    "durableReportsAndReceipts": "complete",
+    "modelAndUsageGovernance": "complete",
+    "optionalProvider": "complete",
+    "optionalActivityAndAutomation": "complete",
+    "retrievalAndRadar": "complete",
+    "skillsAndPlugin": "complete"
+  },
+  "forbiddenState": [
+    "private memory and daily content",
+    "runtime databases, ledgers, reports, artifacts, screenshots and real thread records",
+    "browser rows and workstation file activity",
+    "server inventory and private network addresses",
+    "accounts, identities, cookies, tokens, credentials and environment files",
+    "absolute personal paths and project-specific records"
   ],
-  "requires_genericization": [
-    "project and thread control concepts",
-    "automation scheduling",
-    "desktop release gate"
-  ],
-  "private_only_forbidden": [
-    "memory content and daily logs",
-    "runtime/control.db and ledgers",
-    "identity, relationships, decisions and personal projects",
-    "server inventory, cookies, tokens, environment files and private reports"
-  ],
-  "deferred": [
-    "desktop Electron app and packaging",
-    "canonical control database and War Room",
-    "Codex thread ownership integration",
-    "private browser and workstation activity scanning",
-    "provider-backed AI distillation"
-  ]
+  "defaults": {
+    "externalVault": true,
+    "provider": "disabled",
+    "activity": "disabled",
+    "codexAdapter": "disabled",
+    "researchNetwork": "disabled",
+    "modelRouting": "recommendation_only"
+  }
 }

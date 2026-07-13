@@ -1,12 +1,10 @@
 # Jarvis
 
-Jarvis is a local-first personal chief-of-staff. It captures daily input, turns reviewed material into proposals, and writes durable memory only after explicit approval.
-
-The repository contains code and sanitized schemas. Personal data belongs in an external Vault, which defaults to `~/.jarvis/vault`.
+Jarvis is a local-first personal chief-of-staff: an external private Vault, a review-gated memory lifecycle, a canonical local control plane, and a sandboxed desktop War Room. This public repository contains the complete reusable software capability—not anyone's private state.
 
 ## Quickstart
 
-Requirements: Node.js 20 or newer.
+Requirements: Node.js 22.13 or newer. No API key, Codex installation, browser access, or network connection is required.
 
 ```bash
 git clone https://github.com/buyicoder/Jarvis-public.git
@@ -22,74 +20,57 @@ node bin/jarvis.mjs proposal approve
 node bin/jarvis.mjs apply --yes
 ```
 
-`distill` is deterministic and offline in this public release. It creates a reviewable proposal from today's captures; it does not call a paid model or write long-term memory directly.
+Private data defaults to `~/.jarvis/vault`; operational state defaults to `~/.jarvis/runtime`. A repository-local Vault is rejected unless `JARVIS_LEGACY_REPO_MEMORY=1` is explicitly set.
 
-## Privacy model
-
-- Code, tests, and schemas live in the repository.
-- Captures, daily notes, proposals, projects, identity, and decisions live in the external Vault.
-- `jarvis apply` previews by default. A proposal must be approved, followed by `apply --yes`, before it can change memory.
-- Proposal targets are constrained to the configured Vault; traversal and absolute targets are rejected.
-- No API key is required for bootstrap, doctor, capture, distill, proposal, apply, morning, or routing.
-- `JARVIS_LEGACY_REPO_MEMORY=1` is an explicit compatibility escape hatch. Do not use it in a clone you intend to publish.
-
-To choose another private location:
+## Desktop
 
 ```bash
-export JARVIS_VAULT_DIR=/path/to/private/vault
-npm run bootstrap
+npm run desktop
 ```
 
-## Commands
+The Electron window is sandboxed, uses context isolation, disables Node integration, and talks only to an ephemeral loopback service. Build and verify the macOS artifact locally with:
 
-| Command | Purpose |
-| --- | --- |
-| `jarvis init` | Create the external Vault and copy sanitized schemas |
-| `jarvis doctor` | Check the memory boundary and Vault availability |
-| `jarvis capture` | Save raw input without changing core memory |
-| `jarvis distill [--write-proposal]` | Classify today's captures and optionally create a proposal |
-| `jarvis proposal preview` | Inspect the latest pending proposal |
-| `jarvis proposal approve` | Explicitly approve the latest proposal |
-| `jarvis apply [--yes]` | Preview by default; apply an approved proposal only with `--yes` |
-| `jarvis morning` | Show today's risk-reduction question and recent daily evidence |
-| `jarvis route` | Return recommendation-only model tier metadata |
+```bash
+npm run release:gate:package
+```
 
-The existing SCAR-inspired chunking, local BM25 fallback, vector search, GitHub bootstrap, and multi-source research radar remain available. GitHub repository scanning is explicit and requires `GITHUB_USERNAME`; first download the local embedding model with `npm run model:download`, then run `npm run bootstrap:github`.
+The gate tests a real packaged Electron window, performs a main interaction, saves evidence outside the repository, and scans packaged resources for forbidden state.
 
-## Model governor
+## Capability map
 
-`jarvis route --complexity 4 --risk high --budget normal` returns deterministic JSON with `mode: recommendation_only`. It never edits provider configuration, changes a running task, or selects an ultra/max tier.
+- Memory: capture → deterministic distill → proposal → approval → explicit apply.
+- Vault: copy-only plan, hash verification, and explicit switch with no automatic deletion.
+- Control plane: local SQLite migrations, events, reports/artifacts, decisions, permissions, automations, reconcile, doctor, backup, and restore.
+- War Room: current unresolved projection plus historical timeline.
+- Governance: generic onboarding/owner dispatch, immutable root assignment, idempotent roster reconciliation, and receipt-backed reports.
+- Models: deterministic recommendation-only routing, explain/audit fixtures, strict max requirements, ultra prohibition, sanitized shadow logs, and local token telemetry labeled “not billing”.
+- Optional adapters: provider, Codex state, browser activity, automation, and research network access are independently disabled by default.
+- Retrieval: SCAR-style chunking, local vector search, BM25 fallback, reciprocal-rank fusion, and opt-in multi-source radar.
+- Integration: portable Jarvis skills and a local Codex plugin for brief, risk, safe context, capture, and handoff.
 
-## Development and release checks
+Run `node bin/jarvis.mjs help` for the machine-readable command list.
+
+## Privacy defaults
+
+- Only code, tests, docs, plugin/skills, and sanitized schemas belong in Git or packages.
+- Captures, daily notes, identity, projects, decisions, reports, databases, evidence, and indexes remain external.
+- Activity collection is off by default. When explicitly enabled with paths supplied by the user, only aggregate domain/count/hour evidence is retained.
+- Research radar never uses the network without `--network`.
+- Provider and Codex adapters return controlled unavailable states when unconfigured.
+- Core memory never changes from capture alone; approval and `apply --yes` are both required.
+
+See the [architecture](docs/architecture.md), [privacy threat model](docs/privacy-threat-model.md), [migration guide](docs/migration.md), and [capability parity matrix](docs/public-parity.md).
+
+## Development
 
 ```bash
 npm test
 npm run privacy:scan
+npm run release:check
+git diff --check
 ```
 
-The privacy scanner checks tracked text for absolute user paths, credential-like assignments, private-key material, local server addresses, and control database references. The [public parity matrix](docs/public-parity.md) records what was ported, generalized, kept private, or deferred.
-
-## Migration from repository-local memory
-
-1. Set `JARVIS_VAULT_DIR` to an empty private directory and run `npm run bootstrap`.
-2. Review your old files manually; do not copy generated databases, logs, credentials, or reports.
-3. Copy only memory documents you intentionally want in the Vault.
-4. Keep the repository's `memory/` directory limited to `_schemas` and placeholder files.
-
-Jarvis does not automatically migrate or delete existing files.
-
-## Architecture
-
-```text
-repository (public)                    external Vault (private)
-├── bin/                               ├── captures/
-├── scripts/                           ├── proposals/
-├── memory/_schemas/                   ├── daily/
-├── docs/                              └── core/
-└── test/
-```
-
-See [public-parity.json](docs/public-parity.json) for a machine-readable capability boundary.
+The scanner covers the Git index/worktree, no-`.git` directories, npm tarballs, and packaged app resources. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
